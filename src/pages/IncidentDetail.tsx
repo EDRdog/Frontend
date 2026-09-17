@@ -1,6 +1,7 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '@/api'
+import { ApiError } from '@/api/client'
 import type {
   Alert,
   ExecuteStatus,
@@ -591,6 +592,7 @@ function SourceEventCard({ event }: { event: SourceEvent }) {
 /** responder 실행 결과 status 별 안내 문구와 색. */
 const execResult: Record<ExecuteStatus, { text: string; tone: 'good' | 'high' | 'crit' | 'mid' }> =
   {
+    PENDING: { text: '에이전트 응답을 기다리는 중입니다.', tone: 'mid' },
     KILLED: { text: '프로세스를 종료했습니다.', tone: 'good' },
     NO_MATCH: { text: '대상 프로세스를 찾지 못했습니다.', tone: 'mid' },
     TIMEOUT: { text: '응답 시간이 초과됐습니다.', tone: 'high' },
@@ -607,6 +609,14 @@ const resultBox = {
   mid: 'bg-panel text-mid border border-line',
 }
 
+/** 결과 조회 간격. 서버가 30초에 TIMEOUT 을 주므로 40초가 지나면 스스로도 멈춘다. */
+const POLL_MS = 1000
+const POLL_LIMIT_MS = 40_000
+/** 502 같은 일시 오류를 연달아 몇 번까지 참을지. */
+const POLL_RETRIES = 3
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 /** 실제 조치(kill) 실행. 확인 단계를 거친 뒤 api-service 를 경유해 실행한다. */
 function RealAction({ alert }: { alert: Alert }) {
   const isDemo = useAuthStore((s) => s.token) === null
@@ -617,6 +627,14 @@ function RealAction({ alert }: { alert: Alert }) {
   const [error, setError] = useState<string | null>(null)
   // 종료에 성공하면 서버에서 알림이 confirmed 로 바뀐다. 바로 옆 표가 옛 상태를 들고 있지 않게 한다.
   const bump = useAlertsStore((s) => s.bump)
+  // 화면을 떠나면 결과 조회를 멈춘다.
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
 
   function ask() {
     setResult(null)
@@ -629,13 +647,34 @@ function RealAction({ alert }: { alert: Alert }) {
     setPhase('pending')
     setError(null)
     try {
-      const res = await api.executeKill(alert.id, target)
+      let res = await api.executeKill(alert.id, target)
+      const executionId = res.executionId
+      // 명령이 나갔으면 에이전트 보고가 올 때까지 결과를 조회한다.
+      if (res.status === 'PENDING' && executionId) {
+        const deadline = Date.now() + POLL_LIMIT_MS
+        let failures = 0
+        while (res.status === 'PENDING' && Date.now() < deadline) {
+          await sleep(POLL_MS)
+          if (!alive.current) return
+          try {
+            res = await api.executeKillResult(alert.id, executionId)
+            failures = 0
+          } catch (e) {
+            // 4xx(남의 알림, 모르는 명령)는 다시 물어도 같으니 바로 멈춘다.
+            const clientError = e instanceof ApiError && e.status < 500
+            if (clientError || ++failures > POLL_RETRIES) throw e
+          }
+        }
+        // 서버 TIMEOUT 도 못 받고 상한을 넘기면 시간 초과로 본다.
+        if (res.status === 'PENDING') res = { ...res, status: 'TIMEOUT' }
+      }
+      if (!alive.current) return
       setResult(res.status)
       if (res.status === 'KILLED') bump()
     } catch (e) {
-      setError((e as Error).message)
+      if (alive.current) setError((e as Error).message)
     } finally {
-      setPhase('idle')
+      if (alive.current) setPhase('idle')
     }
   }
 

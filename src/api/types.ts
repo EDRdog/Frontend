@@ -238,8 +238,15 @@ export type GeoDestination = {
   count: number
 }
 
-/** responder-service 실제 조치(kill) 결과. status 는 KillOutcome + 실행기 상태. */
-export type ExecuteStatus = 'KILLED' | 'NO_MATCH' | 'TIMEOUT' | 'FAILED' | 'COOLDOWN' | 'DISABLED'
+/** responder-service 실제 조치(kill) 결과. status 는 KillOutcome + 실행기 상태. PENDING 은 에이전트 보고 전. */
+export type ExecuteStatus =
+  | 'PENDING'
+  | 'KILLED'
+  | 'NO_MATCH'
+  | 'TIMEOUT'
+  | 'FAILED'
+  | 'COOLDOWN'
+  | 'DISABLED'
 
 export type ExecuteResult = {
   host: string
