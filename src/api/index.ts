@@ -161,6 +161,15 @@ export const api = {
           body: { target },
         }),
 
+  /**
+   * 조치 결과 조회. executeKill 이 PENDING 을 주면 이것으로 최종 결과를 받는다.
+   * 데모 executeKill 은 바로 KILLED 를 주고 executionId 가 없어 여기로 오지 않는다.
+   */
+  executeKillResult: (id: string, executionId: string) =>
+    request<ExecuteResult>(
+      `/alerts/${encodeURIComponent(id)}/respond/${encodeURIComponent(executionId)}`,
+    ),
+
   /** egress 토폴로지. 기본 최근 24시간, 관계 수 기본 200·상한 1000. */
   topology: (filter: TopologyFilter = {}) =>
     isDemo()
