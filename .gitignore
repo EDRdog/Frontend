@@ -29,7 +29,17 @@ dist-ssr
 *.sw?
 
 # ===== Claude / OMC operational state =====
-.claude/
+# 하네스 파일(설정, 규칙, 스킬, 에이전트, 명령)은 추적한다.
+# .claude/ 를 통째로 풀면 .claude/worktrees/ 의 워크트리가 딸려 들어와서 개별 예외로 둔다.
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/skills/
+!.claude/agents/
+!.claude/commands/
+.claude/settings.local.json
 .omc/
 !.omc/skills/
+# 루트 CLAUDE.md 만 추적한다.
 CLAUDE.md
+!/CLAUDE.md
