@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { api } from '@/api'
 import LogoMark from '@/components/ui/LogoMark'
 import { useApi } from '@/hooks/useApi'
+import { useLogout } from '@/hooks/useLogout'
 import { initial } from '@/lib/format'
 import { useAlertsStore } from '@/store/alerts'
 import { useAuthStore } from '@/store/auth'
@@ -22,6 +23,8 @@ type NavItem = {
   label: string
   icon: ReactNode
   group?: NavGroup
+  /** 데모가 없어 로그인해야 보인다. 비로그인 방문자에게 열린 화면이 아니다. */
+  needsLogin?: boolean
 }
 
 const items: NavItem[] = [
@@ -213,27 +216,97 @@ const items: NavItem[] = [
       </svg>
     ),
   },
+  {
+    to: '/audit',
+    group: 'PLATFORM',
+    label: '감사기록',
+    needsLogin: true,
+    icon: (
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+        <path d="M14 3v5h5" />
+      </svg>
+    ),
+  },
+  {
+    to: '/selftest',
+    group: 'PLATFORM',
+    label: '자체점검',
+    needsLogin: true,
+    icon: (
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 3l7 3v5c0 4.5-3 7-7 8-4-1-7-3.5-7-8V6z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    to: '/settings',
+    group: 'PLATFORM',
+    label: '설정',
+    needsLogin: true,
+    icon: (
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="8.5" cy="8.5" r="4.5" />
+        <path d="M11.8 11.8L20 20" />
+        <path d="M17 17l2.2-2.2" />
+      </svg>
+    ),
+  },
 ]
 
-// 미판단 위협 배지는 위협 항목에만 붙는다.
+// 미판단 위협 배지는 위협 항목에만 붙는다. 선택된 항목만 파랑으로 채우고 흰 글자로 쓴다.
 function NavRow({ item, openCount }: { item: NavItem; openCount: number }) {
   return (
     <NavLink
       to={item.to}
       className={({ isActive }) =>
         `flex items-center gap-[11px] px-[11px] py-[8px] rounded-sm text-[13px] font-semibold cursor-pointer transition-colors ${
-          isActive
-            ? 'bg-[var(--accent-wash)] text-accent'
-            : 'text-mid hover:text-ink-2 hover:bg-panel'
+          isActive ? 'bg-accent !text-white' : '!text-ink-2 hover:!text-ink hover:bg-panel'
         }`
       }
     >
-      {item.icon}
-      <span>{item.label}</span>
-      {item.to === '/threats' && openCount > 0 && (
-        <span className="ml-auto rounded-xs bg-crit px-[5px] py-[1px] font-mono text-[11px] font-semibold text-white">
-          {openCount}
-        </span>
+      {({ isActive }) => (
+        <>
+          {item.icon}
+          <span>{item.label}</span>
+          {item.to === '/threats' && openCount > 0 && (
+            <span
+              className={`ml-auto rounded-xs px-[5px] py-[1px] font-mono text-[11px] font-semibold ${
+                isActive ? 'bg-white/20 text-white' : 'bg-[var(--crit-wash)] text-crit'
+              }`}
+            >
+              {openCount}
+            </span>
+          )}
+        </>
       )}
     </NavLink>
   )
@@ -246,24 +319,18 @@ type SidebarProps = {
 
 function Sidebar({ open, onClose }: SidebarProps) {
   const user = useAuthStore((s) => s.user)
-  const clear = useAuthStore((s) => s.clear)
-  const navigate = useNavigate()
+  const logout = useLogout()
+  // viewer 는 PLATFORM 묶음을 통째로 못 본다(서버도 403 이라 화면은 숨기기만 한다).
+  // 비로그인 방문자는 데모가 있는 항목만 본다.
+  const visible = items.filter(
+    (item) => item.group !== 'PLATFORM' || (user ? user.role === 'admin' : !item.needsLogin),
+  )
   // 사이드바 배지는 미판단 위협 수. 개수만 필요하므로 목록을 받아 길이를 쓴다.
   const alertsVersion = useAlertsStore((s) => s.version)
   const { data: openAlerts } = useApi(
     () => api.alerts({ status: 'open', limit: 1000 }),
     [alertsVersion],
   )
-
-  async function logout() {
-    try {
-      await api.logout()
-    } catch {
-      // 서버 세션 삭제가 실패해도 로컬 토큰은 비워 로그아웃 상태로 만든다
-    }
-    clear()
-    navigate('/login', { replace: true })
-  }
 
   return (
     <>
@@ -275,7 +342,7 @@ function Sidebar({ open, onClose }: SidebarProps) {
         하단의 사용자 정보와 로그아웃이 주소창에 가려진다.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 h-dvh w-[224px] flex-shrink-0 border-r border-line-2 bg-surface flex flex-col px-[14px] py-[18px] transition-transform overflow-y-auto lg:inset-auto lg:z-auto lg:sticky lg:top-0 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 h-dvh w-[224px] flex-shrink-0 border-r border-line-2 bg-shell flex flex-col px-[14px] py-[18px] transition-transform overflow-y-auto lg:inset-auto lg:z-auto lg:sticky lg:top-0 lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -290,24 +357,26 @@ function Sidebar({ open, onClose }: SidebarProps) {
         </Link>
         <nav className="flex flex-col mt-[6px]">
           <div className="flex flex-col gap-[3px]">
-            {items
+            {visible
               .filter((item) => !item.group)
               .map((item) => (
                 <NavRow key={item.to} item={item} openCount={openAlerts?.length ?? 0} />
               ))}
           </div>
-          {GROUP_ORDER.map((group) => (
-            <div key={group} className="flex flex-col gap-[3px] mt-[16px]">
-              <span className="px-[11px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.09em] text-faint">
-                {group}
-              </span>
-              {items
-                .filter((item) => item.group === group)
-                .map((item) => (
+          {GROUP_ORDER.map((group) => {
+            const groupItems = visible.filter((item) => item.group === group)
+            if (groupItems.length === 0) return null
+            return (
+              <div key={group} className="flex flex-col gap-[3px] mt-[16px]">
+                <span className="px-[11px] pb-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+                  {group}
+                </span>
+                {groupItems.map((item) => (
                   <NavRow key={item.to} item={item} openCount={openAlerts?.length ?? 0} />
                 ))}
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </nav>
         {/* 대시보드는 로그인 없이도 열리므로 비로그인 상태를 함께 다룬다. */}
         {user ? (
@@ -317,14 +386,18 @@ function Sidebar({ open, onClose }: SidebarProps) {
             </div>
             {/*
               로그인한 계정을 그대로 보여준다. 좁아서 잘릴 수 있으므로 전체 주소는 title 로 남긴다.
-              역할은 표시하지 않는다. 가입하면 전부 admin 이라 누구에게나 같은 값이고,
-              권한 분리가 실제로 생기면 그때 자리를 만든다.
+              역할은 admin 과 viewer 가 갈리므로 계정 아래에 같이 적는다.
             */}
-            <span
-              title={user.email}
-              className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink"
-            >
-              {user.email}
+            <span className="min-w-0 flex-1">
+              <span
+                title={user.email}
+                className="block truncate text-[12.5px] font-semibold text-ink"
+              >
+                {user.email}
+              </span>
+              <span className="block font-mono text-[10.5px] uppercase tracking-[0.04em] text-faint">
+                {user.role}
+              </span>
             </span>
             <button
               type="button"
@@ -341,7 +414,7 @@ function Sidebar({ open, onClose }: SidebarProps) {
             </span>
             <NavLink
               to="/login"
-              className="text-center text-[12.5px] font-semibold !text-white bg-accent py-[9px] rounded-sm"
+              className="text-center text-[12.5px] font-semibold !text-white bg-accent hover:bg-accent-strong active:translate-y-px py-[9px] rounded-pill"
             >
               로그인
             </NavLink>

@@ -12,10 +12,13 @@ const API_KEY = import.meta.env.VITE_API_KEY ?? 'dev-api-key'
 
 export class ApiError extends Error {
   readonly status: number
+  /** 백엔드가 error 와 함께 싣는 기계용 코드. 지금은 password_change_required 뿐이다. */
+  readonly code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -101,32 +104,40 @@ async function send(
   }
 
   if (!res.ok) {
+    const { message, code } = await errorBody(res)
+    // 기본 비밀번호를 안 바꾼 계정은 변경·로그아웃·내 정보 말고는 403 이다. 강제 변경 화면으로 보낸다.
+    if (res.status === 403 && code === 'password_change_required') {
+      useAuthStore.getState().requirePasswordChange()
+    }
     // 401 은 원인이 둘이다.
-    // 1) 토큰 만료/무효: 재로그인이 답이라 clear() 로 로그인 화면으로 돌린다.
+    // 1) 세션이 끝남(유휴 종료, 다른 곳에서 로그인, 만료): 재로그인이 답이라 세션을 비우고 로그인 화면으로 돌린다.
     // 2) X-API-Key 불일치(ApiKeyFilter): /tenant/** 경로만 X-API-Key 를 강제하는데,
     //    배포자가 백엔드 EDRDOG_API_KEY 와 프론트 VITE_API_KEY 를 다르게 설정하면 여기서 401 이 난다.
-    //    이 경우 재로그인해도 고쳐지지 않으므로 clear() 하지 말고 에러를 그대로 던져
-    //    화면에 원인 메시지가 보이게 한다(clear() 하면 컴포넌트가 언마운트되며 원인이 사라진다).
-    const isTenantPath = path.startsWith('/tenant/')
-    if (res.status === 401 && auth && !isTenantPath) useAuthStore.getState().clear()
-    throw new ApiError(res.status, await errorMessage(res))
+    //    이 경우 재로그인해도 고쳐지지 않으므로 비우지 말고 에러를 그대로 던져
+    //    화면에 원인 메시지가 보이게 한다(비우면 컴포넌트가 언마운트되며 원인이 사라진다).
+    //    두 경우는 /tenant/ 경로의 본문이 헤더 이름을 말하는지로 가른다.
+    const isKeyMismatch = path.startsWith('/tenant/') && message.includes('X-API-Key')
+    if (res.status === 401 && auth && !isKeyMismatch) useAuthStore.getState().endSession()
+    throw new ApiError(res.status, message, code)
   }
   return res
 }
 
 export const UNREACHABLE = '서버에 연결하지 못했습니다'
 
-/** 백엔드 에러 본문은 {"error": "..."} 형태. 아니면 상태코드로 대체한다. */
-async function errorMessage(res: Response): Promise<string> {
+/** 백엔드 에러 본문은 {"error": "...", "code"?: "..."} 형태. 아니면 상태코드로 대체한다. */
+async function errorBody(res: Response): Promise<{ message: string; code?: string }> {
   try {
-    const data = (await res.json()) as { error?: string }
-    if (typeof data.error === 'string') return data.error
+    const data = (await res.json()) as { error?: string; code?: string }
+    if (typeof data.error === 'string') {
+      return { message: data.error, code: typeof data.code === 'string' ? data.code : undefined }
+    }
   } catch {
     // JSON 본문이 아니면 아래 기본 문구를 쓴다
   }
   // 5xx 는 서버가 죽었거나 dev 프록시가 대상에 못 붙은 경우라 사용자가 할 일이 다르다.
-  if (res.status >= 500) return UNREACHABLE
-  return `요청에 실패했습니다 (${res.status})`
+  if (res.status >= 500) return { message: UNREACHABLE }
+  return { message: `요청에 실패했습니다 (${res.status})` }
 }
 
 type QueryValue = string | number | boolean | undefined | null

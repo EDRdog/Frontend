@@ -4,6 +4,7 @@ import { api } from '@/api'
 import type { Alert } from '@/api/types'
 import { statusLabel } from '@/lib/format'
 import { useAlertsStore } from '@/store/alerts'
+import { useAuthStore } from '@/store/auth'
 
 /**
  * detector 가 severity 로 정하는 권고 대응(notify|kill|isolate).
@@ -30,6 +31,8 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
   const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bump = useAlertsStore((s) => s.bump)
+  // viewer 는 판단하지 못한다. 서버도 403 을 주므로 화면은 버튼을 숨기기만 한다.
+  const viewer = useAuthStore((s) => s.user?.role === 'viewer')
 
   async function triage(status: 'confirmed' | 'false_positive') {
     setPending(status)
@@ -67,7 +70,11 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
           </Link>
         )}
 
-        {alert.status !== 'open' ? (
+        {viewer ? (
+          <span className="whitespace-nowrap text-[12px] text-mid">
+            조회 전용 계정입니다. 대응과 판단은 admin 이 합니다.
+          </span>
+        ) : alert.status !== 'open' ? (
           <span className="flex-1 sm:flex-none text-center whitespace-nowrap text-[13px] font-semibold text-mid border border-line px-[16px] py-[10px] rounded-sm">
             {statusLabel(alert.status)}
           </span>
@@ -76,14 +83,14 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
             <button
               type="button"
               onClick={() => setAsking(false)}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line px-[16px] py-[10px] rounded-sm cursor-pointer font-sans"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line hover:bg-panel px-[16px] py-[10px] rounded-sm cursor-pointer font-sans active:translate-y-px"
             >
               취소
             </button>
             <button
               type="button"
               onClick={() => triage('confirmed')}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-crit px-[18px] py-[10px] rounded-sm cursor-pointer font-sans"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-crit px-[18px] py-[10px] rounded-pill cursor-pointer font-sans active:translate-y-px"
             >
               정말 확정하시겠습니까?
             </button>
@@ -94,7 +101,7 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
               type="button"
               onClick={() => triage('false_positive')}
               disabled={pending !== null}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line px-[16px] py-[10px] rounded-sm cursor-pointer font-sans disabled:opacity-60"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line hover:bg-panel px-[16px] py-[10px] rounded-sm cursor-pointer font-sans active:translate-y-px disabled:opacity-60"
             >
               {pending === 'false_positive' ? '처리 중' : '오탐'}
             </button>
@@ -102,7 +109,7 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
               type="button"
               onClick={() => setAsking(true)}
               disabled={pending !== null}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-accent px-[18px] py-[10px] rounded-sm cursor-pointer font-sans disabled:opacity-60"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-accent hover:bg-accent-strong px-[18px] py-[10px] rounded-pill cursor-pointer font-sans active:translate-y-px disabled:opacity-60"
             >
               {pending === 'confirmed' ? '처리 중' : '위협 확정'}
             </button>

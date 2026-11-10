@@ -12,12 +12,13 @@ import type {
 } from '@/api/types'
 import AsyncState from '@/components/ui/AsyncState'
 import Badge from '@/components/ui/Badge'
-import Card from '@/components/ui/Card'
+import Card, { panelHead } from '@/components/ui/Card'
 import RelationGraph, {
   type GraphEdge,
   type GraphNode,
   type GraphTone,
 } from '@/components/ui/RelationGraph'
+import Tag from '@/components/ui/Tag'
 import { useApi } from '@/hooks/useApi'
 import { absoluteTime } from '@/lib/format'
 
@@ -147,23 +148,31 @@ function corrGraphEdges(correlation: Correlation): GraphEdge[] {
   })
 }
 
+/** 범례 줄 머리(관계의 출처, 노드). */
 function LegendTitle({ children }: { children: string }) {
-  return <div className="text-[11.5px] font-semibold text-faint">{children}</div>
+  return (
+    <span className="font-mono text-[10px] font-semibold tracking-[0.1em] text-faint">
+      {children}
+    </span>
+  )
 }
 
-function LegendRow({ mark, label, note }: { mark: React.ReactNode; label: string; note?: string }) {
+/** 범례 한 칸: 견본, 이름, 짧은 설명. 그래프 아래에 가로로 흘려 놓는다. */
+function LegendItem({
+  mark,
+  label,
+  note,
+}: {
+  mark: React.ReactNode
+  label: string
+  note?: string
+}) {
   return (
-    <div className="flex items-start gap-[9px]">
-      <span className="mt-[3px] flex h-[12px] w-[22px] shrink-0 items-center justify-center">
-        {mark}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[12.5px] text-ink-2">{label}</span>
-        {note && (
-          <span className="mt-[2px] block text-[11.5px] leading-[1.55] text-faint">{note}</span>
-        )}
-      </span>
-    </div>
+    <span className="inline-flex items-center gap-[8px]">
+      <span className="flex h-[12px] w-[22px] shrink-0 items-center justify-center">{mark}</span>
+      <span className="shrink-0">{label}</span>
+      {note && <small className="text-[11.5px] text-faint">{note}</small>}
+    </span>
   )
 }
 
@@ -262,9 +271,9 @@ function LiveDnsCard({
   reverse: ReverseLookup | null
 }) {
   return (
-    <Card className="flex flex-col gap-[16px] px-[16px] py-[18px]">
+    <Card className="flex flex-col gap-[16px] px-[18px] py-[18px]">
       <div>
-        <div className="text-[13px] font-bold text-ink">실시간 DNS 조회</div>
+        <h2 className="text-[14px] font-bold text-ink">실시간 DNS 조회</h2>
         <div className="mt-[5px] text-[11.5px] leading-[1.6] text-faint">
           조회 버튼을 누른 시점에 DNS 서버에 물어본 결과입니다. 우리가 수집한 이벤트와는 무관합니다.
         </div>
@@ -306,8 +315,8 @@ function InferredBasis({ correlation }: { correlation: Correlation }) {
   if (inferred.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-[8px] border-t border-line-2 pt-[14px]">
-      <div className="text-[12px] font-semibold text-ink-2">추정 관계의 근거</div>
+    <div className="flex flex-col gap-[8px] rounded-sm bg-panel-2 px-[14px] py-[12px]">
+      <div className="text-[12.5px] font-semibold text-ink">추정 관계의 근거</div>
       {inferred.map((edge, i) => (
         <div key={`${edge.from}-${edge.to}-${i}`} className="text-[12px] leading-[1.6] text-faint">
           <span className="font-mono text-ink-2">
@@ -354,8 +363,10 @@ function Lookup() {
     setTarget(trimmed)
   }
 
+  const hasInferred = data?.edges.some((edge) => edge.origin === 'INFERRED') ?? false
+
   return (
-    <div className="flex flex-col gap-[32px]">
+    <div className="flex flex-col gap-[16px]">
       <div>
         <div className="text-[18px] font-bold tracking-[-0.01em] text-ink sm:text-[20px]">
           IP·도메인 조회
@@ -366,79 +377,99 @@ function Lookup() {
         </div>
       </div>
 
-      <section className="flex flex-col gap-[16px]">
-        <Card className="flex flex-col gap-[14px] px-[16px] py-[16px]">
-          <form
-            className="flex flex-col gap-[8px] sm:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault()
-              lookup(input)
-            }}
+      {/* 검색 중심: 큰 검색창과 관측된 목적지 칩 */}
+      <Card className="flex flex-col items-center gap-[16px] px-[16px] py-[28px] text-center sm:px-[32px] sm:py-[40px]">
+        <h2 className="text-[20px] font-bold tracking-[-0.02em] text-ink sm:text-[24px]">
+          무엇과 이어져 있는지 찾아봅니다
+        </h2>
+        <form
+          className="flex w-full max-w-[640px] items-center gap-[10px] rounded-sm border border-line bg-bg py-[6px] pl-[16px] pr-[6px] focus-within:border-accent"
+          onSubmit={(e) => {
+            e.preventDefault()
+            lookup(input)
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden
+            className="h-[18px] w-[18px] flex-none fill-none stroke-mid stroke-2"
           >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="도메인 또는 IP"
-              aria-label="상관 분석 대상"
-              className="min-w-0 flex-1 rounded-sm border border-line bg-surface px-[11px] py-[9px] font-mono text-[12.5px] text-ink placeholder:text-faint"
-            />
-            <button
-              type="submit"
-              disabled={input.trim() === ''}
-              className="rounded-sm border border-line bg-panel px-[16px] py-[9px] font-sans text-[12.5px] font-semibold text-ink-2 disabled:text-faint enabled:cursor-pointer"
-            >
-              조회
-            </button>
-          </form>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-4-4" />
+          </svg>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="도메인 또는 IP"
+            aria-label="상관 분석 대상"
+            className="h-[42px] min-w-0 flex-1 bg-transparent font-mono text-[15px] text-ink outline-none placeholder:font-sans placeholder:text-faint sm:text-[17px]"
+          />
+          <button
+            type="submit"
+            disabled={input.trim() === ''}
+            className="h-[42px] shrink-0 rounded-pill bg-accent px-[22px] font-sans text-[13px] font-semibold text-white transition-colors duration-[140ms] enabled:cursor-pointer enabled:hover:bg-accent-strong disabled:opacity-50"
+          >
+            조회
+          </button>
+        </form>
 
-          {examples.length > 0 && (
-            <div className="flex flex-wrap items-center gap-[7px]">
-              <span className="text-[11.5px] text-faint">관측된 목적지</span>
-              {examples.map((example) => (
-                <button
-                  key={example}
-                  type="button"
-                  onClick={() => lookup(example)}
-                  className="cursor-pointer rounded-full border border-line bg-panel px-[11px] py-[5px] font-mono text-[11.5px] text-ink-2"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {target === '' ? (
-          <Card className="px-[16px] py-[28px] text-center text-[12.5px] text-faint">
-            대상을 입력하면 관계를 그립니다.
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 items-start gap-[16px] lg:grid-cols-[minmax(0,1fr)_300px]">
-            <Card className="px-[12px] py-[14px] sm:px-[16px]">
-              <AsyncState
-                loading={correlation.loading}
-                error={correlation.error}
-                onRetry={correlation.refetch}
+        {examples.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-[7px]">
+            <span className="mr-[2px] text-[11.5px] text-faint">관측된 목적지</span>
+            {examples.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => lookup(example)}
+                aria-pressed={example === target}
+                className={`max-w-full cursor-pointer truncate rounded-pill border bg-surface px-[11px] py-[4px] font-mono text-[11.5px] transition-colors duration-[140ms] hover:border-accent-ink hover:text-accent-ink ${
+                  example === target
+                    ? 'border-accent-ink text-accent-ink'
+                    : 'border-line text-ink-2'
+                }`}
               >
-                {data && (
-                  <div className="flex flex-col gap-[14px]">
-                    <div className="flex flex-wrap items-center gap-[10px] px-[4px]">
-                      <Badge severity="accent">{data.target.kind === 'IP' ? 'IP' : '도메인'}</Badge>
-                      <span className="font-mono text-[13px] text-ink">{data.target.value}</span>
-                      <span className="text-[12px] text-faint">
-                        관측 이벤트 {data.observedEvents.toLocaleString()}건
-                      </span>
-                      <Link
-                        to={`/threats?${data.target.kind === 'IP' ? 'destIp' : 'domain'}=${encodeURIComponent(data.target.value)}`}
-                        className="ml-auto text-[12px] font-semibold text-accent hover:underline"
-                      >
-                        이 목적지의 위협 보기
-                      </Link>
-                    </div>
+                {example}
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
 
+      {target === '' ? (
+        <div className="py-[12px] text-center text-[12.5px] text-faint">
+          대상을 입력하면 관계를 그립니다.
+        </div>
+      ) : (
+        <>
+          <Card className="overflow-hidden">
+            <AsyncState
+              loading={correlation.loading}
+              error={correlation.error}
+              onRetry={correlation.refetch}
+            >
+              {data && (
+                <>
+                  {/* 결과 머리: 대상 종류, 값, 관측 수, 위협 목록으로 가는 길 */}
+                  <div className={`${panelHead} flex-wrap`}>
+                    <Tag>{data.target.kind === 'IP' ? 'IP' : '도메인'}</Tag>
+                    <h2 className="min-w-0 font-mono text-[14px] font-semibold text-ink wrap-anywhere">
+                      {data.target.value}
+                    </h2>
+                    <span className="font-mono text-[11px] text-faint">
+                      관측 이벤트 {data.observedEvents.toLocaleString()}건
+                    </span>
+                    <Link
+                      to={`/threats?${data.target.kind === 'IP' ? 'destIp' : 'domain'}=${encodeURIComponent(data.target.value)}`}
+                      className="ml-auto text-[12px] font-semibold hover:underline"
+                    >
+                      이 목적지의 위협 보기 →
+                    </Link>
+                  </div>
+
+                  <div className="flex flex-col gap-[14px] px-[10px] py-[12px] sm:px-[18px] sm:py-[16px]">
                     {/* 관측이 0 이면 그래프만 비워 두지 않고 무엇이 없는 것인지 말한다. */}
                     {data.observedEvents === 0 && (
-                      <div className="flex flex-col gap-[4px] rounded-sm border border-line bg-panel px-[14px] py-[11px]">
+                      <div className="flex flex-col gap-[4px] rounded-sm bg-panel-2 px-[14px] py-[11px]">
                         <div className="text-[12.5px] font-semibold text-ink-2">
                           우리가 관측한 적 없는 대상입니다
                         </div>
@@ -461,66 +492,75 @@ function Lookup() {
                         label={`${data.target.value} 상관 관계 그래프`}
                       />
                     )}
-
-                    <InferredBasis correlation={data} />
                   </div>
-                )}
-              </AsyncState>
-            </Card>
 
-            <div className="flex flex-col gap-[16px]">
-              <Card className="flex flex-col gap-[14px] px-[16px] py-[18px]">
-                <LegendTitle>노드</LegendTitle>
-                <div className="flex flex-col gap-[10px]">
-                  {(Object.keys(corrNodeMeta) as CorrelationNodeKind[]).map((kind) => (
-                    <LegendRow
-                      key={kind}
-                      mark={
-                        <NodeMark
-                          tone={corrNodeMeta[kind].tone}
-                          variant={corrNodeMeta[kind].variant}
+                  {/* 범례: 출처별 선 모양과 노드 종류 */}
+                  <div className="flex flex-col gap-[10px] border-t border-line-2 px-[18px] py-[16px] text-[12px] text-ink-2">
+                    <div className="flex flex-wrap items-center gap-x-[22px] gap-y-[10px]">
+                      <LegendTitle>관계의 출처</LegendTitle>
+                      {(Object.keys(originMeta) as RelationOrigin[]).map((origin) => (
+                        <LegendItem
+                          key={origin}
+                          mark={
+                            <LineMark
+                              tone={originMeta[origin].tone}
+                              line={originMeta[origin].line}
+                            />
+                          }
+                          label={originMeta[origin].label}
+                          note={originMeta[origin].note}
                         />
-                      }
-                      label={corrNodeMeta[kind].caption}
-                      note={kind === 'PTR_NAME' ? 'IP 의 이름이 아니라 후보입니다' : undefined}
-                    />
-                  ))}
-                  <LegendRow
-                    mark={<NodeMark tone="accent" variant="solid" />}
-                    label="조회 대상"
-                    note="테두리가 굵은 카드입니다"
-                  />
-                </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-[22px] gap-y-[10px]">
+                      <LegendTitle>노드</LegendTitle>
+                      {(Object.keys(corrNodeMeta) as CorrelationNodeKind[]).map((kind) => (
+                        <LegendItem
+                          key={kind}
+                          mark={
+                            <NodeMark
+                              tone={corrNodeMeta[kind].tone}
+                              variant={corrNodeMeta[kind].variant}
+                            />
+                          }
+                          label={corrNodeMeta[kind].caption}
+                          note={kind === 'PTR_NAME' ? 'IP 의 이름이 아니라 후보입니다' : undefined}
+                        />
+                      ))}
+                      <LegendItem
+                        mark={<NodeMark tone="accent" variant="solid" />}
+                        label="조회 대상"
+                        note="테두리가 굵은 카드입니다"
+                      />
+                    </div>
+                    <p className="text-[11.5px] leading-[1.6] text-faint">
+                      같은 두 점 사이라도 출처가 다르면 관계를 따로 그립니다.
+                    </p>
+                  </div>
+                </>
+              )}
+            </AsyncState>
+          </Card>
 
-                <LegendTitle>관계의 출처</LegendTitle>
-                <div className="flex flex-col gap-[10px]">
-                  {(Object.keys(originMeta) as RelationOrigin[]).map((origin) => (
-                    <LegendRow
-                      key={origin}
-                      mark={
-                        <LineMark tone={originMeta[origin].tone} line={originMeta[origin].line} />
-                      }
-                      label={originMeta[origin].label}
-                      note={originMeta[origin].note}
-                    />
-                  ))}
-                </div>
-                <div className="text-[11.5px] leading-[1.6] text-faint">
-                  같은 두 점 사이라도 출처가 다르면 관계를 따로 그립니다.
-                </div>
-              </Card>
-
-              {correlation.loading || !data ? null : data.liveDns ? (
+          {/* 그래프 아래: 추정 근거와 실시간 DNS. 근거가 없으면 DNS 카드가 폭을 다 쓴다. */}
+          {data && !correlation.loading && (
+            <section
+              className={`grid grid-cols-1 items-start gap-[16px] ${
+                hasInferred ? 'xl:grid-cols-[minmax(0,1fr)_340px]' : ''
+              }`}
+            >
+              <InferredBasis correlation={data} />
+              {data.liveDns ? (
                 <LiveDnsCard forward={data.liveDns.forward} reverse={data.liveDns.reverse} />
               ) : (
-                <Card className="px-[16px] py-[18px] text-[12.5px] leading-[1.6] text-faint">
+                <Card className="px-[18px] py-[18px] text-[12.5px] leading-[1.6] text-faint">
                   실시간 DNS 조회를 하지 않았습니다.
                 </Card>
               )}
-            </div>
-          </div>
-        )}
-      </section>
+            </section>
+          )}
+        </>
+      )}
     </div>
   )
 }

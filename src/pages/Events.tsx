@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/api'
 import { useApi } from '@/hooks/useApi'
@@ -7,8 +7,8 @@ import type { EdrEvent } from '@/api/types'
 import ActiveFilters, { type ActiveFilter } from '@/components/ui/ActiveFilters'
 import AsyncState from '@/components/ui/AsyncState'
 import Badge from '@/components/ui/Badge'
-import Card from '@/components/ui/Card'
-import ScrollArea from '@/components/ui/ScrollArea'
+import Card, { panelHead } from '@/components/ui/Card'
+import FocusList from '@/components/ui/FocusList'
 import Select from '@/components/ui/Select'
 import { absoluteTime, eventTypeLabel } from '@/lib/format'
 
@@ -31,9 +31,6 @@ const ALL_TYPES = 'all'
 
 /** 유형 드롭다운에 먼저 세울 순서. 여기 없는 유형(백엔드가 새로 수집하기 시작한 것)은 뒤에 붙는다. */
 const TYPE_ORDER = ['process', 'script', 'network', 'file', 'dns', 'l7']
-
-/** 발생 시각 / 호스트 / 유형 / 내용 / 적재 시각 / 펼침 */
-const rowGrid = 'grid grid-cols-[152px_120px_104px_1fr_152px_20px] gap-[12px] px-[4px]'
 
 const dnsCodeLabels: Record<number, string> = {
   0: '성공',
@@ -135,49 +132,106 @@ function prettyDetail(detail: string): string {
   }
 }
 
-/** 같은 초에 같은 프로세스가 여러 이벤트를 남기므로 유형·목적지까지 넣어야 갈린다. */
+/**
+ * 고른 이벤트를 짚는 값. id 가 결정적이라 새로고침으로 줄이 밀려도 같은 이벤트를 가리킨다.
+ * id 가 비어 오면 내용으로 접는다. 같은 초에 같은 프로세스가 여러 이벤트를 남기므로 유형·목적지까지 넣는다.
+ */
 function keyOf(e: EdrEvent): string {
-  return [e.ts, e.type, e.host, e.process, e.destIp, e.domain].join('|')
+  return e.id || [e.ts, e.type, e.host, e.process, e.destIp, e.domain].join('|')
 }
 
-function Detail({ event, onFilterHost }: { event: EdrEvent; onFilterHost?: () => void }) {
+/** 크게 세울 제목. 모르는 유형의 요약은 원본 JSON 이라 제목으로 세우지 않는다. */
+function titleOf(e: EdrEvent): string {
+  if (e.type === 'process' || e.type === 'script') return e.process || e.cmdline || '프로세스 없음'
+  // 64자 해시는 큰 글씨로 세 줄을 넘긴다. 제목에는 앞부분만, 전체 값은 아래 필드에 있다.
+  if (e.type === 'file' && e.sha256) {
+    return [e.action, `${e.sha256.slice(0, 16)}…`].filter(Boolean).join(' · ')
+  }
+  if (TYPE_ORDER.includes(e.type)) return summarize(e) || e.process || eventTypeLabel(e.type)
+  return e.process || eventTypeLabel(e.type)
+}
+
+// 명령줄·원본 detail 블록. 긴 한 줄도 접어서 좁은 화면에서 옆으로 밀리지 않게 한다.
+const codeBlock =
+  'rounded-sm border border-line-2 bg-bg px-[14px] py-[12px] font-mono text-[12px] leading-[1.7] text-ink-2 whitespace-pre-wrap wrap-anywhere'
+
+/** 고른 이벤트 하나: 유형·시각, 제목, 호스트·부모, 명령줄, 필드, 원본 detail. */
+function EventFocus({ event, onFilterHost }: { event: EdrEvent; onFilterHost?: () => void }) {
+  // 명령줄은 위에 블록으로 크게 보여주므로 필드 목록에서는 뺀다.
+  const fields = detailFields(event).filter(([label]) => !(event.cmdline && label === '명령줄'))
+
   return (
-    <div className="border-t border-line-2 bg-panel px-[16px] py-[14px]">
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-[18px] gap-y-[7px] sm:grid-cols-[max-content_1fr_max-content_1fr]">
-        {detailFields(event).map(([label, value]) => (
+    <>
+      <div className="flex flex-wrap items-center gap-[8px]">
+        {/*
+          유형은 심각도가 아니다. 이 앱에서 색은 심각도 뜻으로만 쓰기 때문에
+          유형에 색을 주면 위험도로 잘못 읽힌다. 배지 모양만 쓰고 색은 중립으로 둔다.
+        */}
+        <Badge severity="mid">{eventTypeLabel(event.type)}</Badge>
+        <span className="ml-auto font-mono text-[12px] text-mid tabular-nums">
+          {absoluteTime(event.ts)}
+        </span>
+      </div>
+      <h2 className="mt-[16px] font-mono text-[20px] sm:text-[24px] font-semibold leading-[1.3] tracking-[-0.02em] text-ink wrap-anywhere">
+        {titleOf(event)}
+      </h2>
+      <p className="mt-[4px] text-[13px] text-mid wrap-anywhere">
+        <span className="font-mono font-semibold text-ink">{event.host}</span>
+        {event.parent && (
+          <>
+            {' '}
+            · 부모 <span className="font-mono font-semibold text-ink">{event.parent}</span>
+          </>
+        )}
+      </p>
+
+      {event.cmdline && (
+        <>
+          <h3 className="mt-[22px] mb-[10px] text-[13px] font-bold text-ink">명령줄</h3>
+          <pre className={`m-0 ${codeBlock} text-[13px]`}>{event.cmdline}</pre>
+        </>
+      )}
+
+      <h3 className="mt-[22px] mb-[10px] text-[13px] font-bold text-ink">필드</h3>
+      <dl className="grid grid-cols-[104px_minmax(0,1fr)] gap-x-[16px] gap-y-[9px]">
+        {fields.map(([label, value]) => (
           <Fragment key={label}>
-            <dt className="text-[11.5px] text-faint">{label}</dt>
+            <dt className="text-[12px] text-faint">{label}</dt>
             <dd className="min-w-0 font-mono text-[12px] text-ink-2 wrap-anywhere">{value}</dd>
           </Fragment>
         ))}
       </dl>
+
+      {/*
+        백엔드가 새로 수집하기 시작한 값은 위 필드에 아직 없다. 그때 화면을 고칠 때까지
+        조사를 멈추지 않으려면 평탄화 전 원문을 볼 수 있어야 한다. 길 수 있어 접어 두고, 펴도 안에서 스크롤한다.
+      */}
+      <details className="mt-[22px]">
+        <summary className="cursor-pointer text-[13px] font-bold text-ink">원본 detail</summary>
+        <pre className={`mt-[10px] mb-0 max-h-[360px] overflow-y-auto ${codeBlock}`}>
+          {prettyDetail(event.detail)}
+        </pre>
+      </details>
+
       {onFilterHost && (
         <button
           type="button"
           onClick={onFilterHost}
-          className="mt-[14px] cursor-pointer rounded-sm border border-line bg-surface px-[11px] py-[6px] font-sans text-[11.5px] font-semibold text-accent"
+          className="mt-[20px] cursor-pointer rounded-sm border border-line bg-surface px-[14px] py-[8px] font-sans text-[12.5px] font-semibold text-ink-2 hover:bg-panel-2 active:translate-y-px"
         >
           이 호스트만 보기
         </button>
       )}
-      {/*
-        백엔드가 새로 수집하기 시작한 값은 위 필드에 아직 없다. 그때 화면을 고칠 때까지
-        조사를 멈추지 않으려면 평탄화 전 원문을 볼 수 있어야 한다.
-      */}
-      <details className="mt-[12px]">
-        <summary className="cursor-pointer text-[11.5px] text-faint">원본 detail</summary>
-        <pre className="mt-[8px] overflow-x-auto rounded-sm border border-line bg-surface p-[10px] font-mono text-[11px] text-mid">
-          {prettyDetail(event.detail)}
-        </pre>
-      </details>
-    </div>
+    </>
   )
 }
 
 function Events() {
   const [period, setPeriod] = useState<string>(DEFAULT_PERIOD)
   const [type, setType] = useState<string>(ALL_TYPES)
-  const [openKey, setOpenKey] = useState<string | null>(null)
+  // 오른쪽 흐름에서 고른 이벤트. 고른 게 없거나 목록에서 빠지면 맨 위(최신) 이벤트로 돌아간다.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const focusRef = useRef<HTMLDivElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const host = searchParams.get('host')
   const navigate = useNavigate()
@@ -235,14 +289,28 @@ function Events() {
     ]
   }, [rows])
 
-  // 필터가 바뀌면 목록이 통째로 달라진다. 펼쳐 둔 줄을 그대로 두면 엉뚱한 줄이 열린 채로 남는다.
+  // 필터가 바뀌면 목록이 통째로 달라진다. 고른 줄을 그대로 두면 엉뚱한 줄이 남는다.
   function change(apply: () => void) {
     apply()
-    setOpenKey(null)
+    setSelectedKey(null)
+  }
+
+  const focus = rows.find((e) => keyOf(e) === selectedKey) ?? rows[0] ?? null
+
+  function select(key: string) {
+    setSelectedKey(key)
+    // 검색으로 연 이벤트를 보던 중이면 흐름에서 고른 것으로 넘어간다. 호스트 조건은 남긴다.
+    if (pinnedId) setSearchParams(host ? { host } : {})
+    // 1280 미만에서는 상세가 목록 위에 쌓여 있어 눌러도 바뀐 게 안 보인다. 상세 머리로 올려 준다.
+    if (!window.matchMedia('(min-width: 1280px)').matches) {
+      focusRef.current?.scrollIntoView({ block: 'start' })
+    }
   }
 
   function commitHost() {
     const next = hostInput.trim()
+    // 입력칸을 눌렀다 나오기만 해도 blur 가 온다. 값이 그대로면 보던 이벤트를 놓지 않는다.
+    if (next === (host ?? '')) return
     change(() => setSearchParams(next ? { host: next } : {}))
   }
 
@@ -256,10 +324,18 @@ function Events() {
             onClear: () => change(() => setPeriod(DEFAULT_PERIOD)),
           },
         ]),
-    ...(host ? [{ label: '호스트', value: host, onClear: () => change(() => setSearchParams({})) }] : []),
+    ...(host
+      ? [{ label: '호스트', value: host, onClear: () => change(() => setSearchParams({})) }]
+      : []),
     ...(type === ALL_TYPES
       ? []
-      : [{ label: '유형', value: eventTypeLabel(type), onClear: () => change(() => setType(ALL_TYPES)) }]),
+      : [
+          {
+            label: '유형',
+            value: eventTypeLabel(type),
+            onClear: () => change(() => setType(ALL_TYPES)),
+          },
+        ]),
   ]
 
   return (
@@ -309,132 +385,114 @@ function Events() {
       {/* 다른 화면에서 호스트를 좁혀 들어오는 경로가 있어(엔드포인트 등) 되돌아갈 길을 준다. */}
       <ActiveFilters filters={activeFilters} onBack={canGoBack ? () => navigate(-1) : undefined} />
 
-      {pinnedId && (
-        <Card>
-          <div className="flex items-center justify-between gap-[12px] border-b border-line-2 px-[16px] py-[14px] sm:px-[24px]">
-            <span className="text-[14px] font-bold text-ink">검색으로 연 이벤트</span>
-            <button
-              type="button"
-              onClick={() => setSearchParams(host ? { host } : {})}
-              className="cursor-pointer text-[12px] font-semibold text-faint"
-            >
-              닫기
-            </button>
-          </div>
-          <AsyncState
-            loading={pinned.loading}
-            error={pinned.error}
-            empty={pinned.data === null}
-            emptyText="이 이벤트를 찾지 못했습니다"
-            onRetry={pinned.refetch}
-          >
-            {pinned.data && <Detail event={pinned.data} />}
-          </AsyncState>
-        </Card>
-      )}
-
-      <Card>
-        <div className="flex items-baseline justify-between gap-[12px] border-b border-line-2 px-[16px] py-[14px] sm:px-[24px]">
-          <span className="text-[14px] font-bold text-ink">수집 로그</span>
-          <span className="font-mono text-[12px] text-faint">
-            {total === null ? `${rows.length}건` : `${rows.length} / ${total}건`}
-          </span>
-        </div>
-        <div className="px-[16px] py-[14px] sm:px-[24px] sm:py-[18px]">
-          <AsyncState
-            loading={loading}
-            error={error}
-            empty={rows.length === 0}
-            emptyText="조건에 맞는 이벤트가 없습니다"
-            onRetry={reload}
-          >
-            <ScrollArea label="이벤트 목록">
-              <div className="min-w-[920px]">
-                <div
-                  className={`${rowGrid} pt-2 pb-2 border-b border-line-2 text-[11px] text-faint uppercase tracking-[0.04em]`}
-                >
-                  <span>발생 시각</span>
-                  <span>호스트</span>
-                  <span>유형</span>
-                  <span>내용</span>
-                  <span>적재 시각</span>
-                  <span />
+      {/*
+        포커스: 왼쪽 이벤트 하나 크게, 오른쪽 최신순 흐름. 2열은 대시보드와 같이 xl(1280) 부터.
+        상단바 검색에서 이벤트 한 건을 짚고 들어왔으면 그 이벤트를 먼저 띄운다.
+      */}
+      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-[16px] items-start">
+        <div ref={focusRef} className="min-w-0 scroll-mt-[74px]">
+          <Card className="px-[18px] py-[20px] sm:px-[28px] sm:py-[26px]">
+            {pinnedId ? (
+              <>
+                <div className="mb-[16px] flex items-center justify-between gap-[12px] border-b border-line-2 pb-[12px]">
+                  <span className="text-[12px] font-semibold text-faint">검색으로 연 이벤트</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchParams(host ? { host } : {})}
+                    className="cursor-pointer font-sans text-[12px] font-semibold text-faint hover:text-ink-2"
+                  >
+                    닫기
+                  </button>
                 </div>
-                {rows.map((row, i) => {
-                  const key = `${keyOf(row)}#${i}`
-                  const open = openKey === key
-                  return (
-                    <div key={key} className={i === rows.length - 1 ? '' : 'border-b border-line-2'}>
-                      <button
-                        type="button"
-                        onClick={() => setOpenKey(open ? null : key)}
-                        aria-expanded={open}
-                        className={`${rowGrid} w-full items-center py-[11px] text-left font-sans cursor-pointer hover:bg-panel rounded-xs`}
-                      >
-                        <span className="font-mono text-[11.5px] text-ink-2">
-                          {absoluteTime(row.ts)}
-                        </span>
-                        <span className="truncate font-mono text-[12px] text-mid">{row.host}</span>
-                        {/*
-                          유형은 심각도가 아니다. 이 앱에서 색은 심각도 뜻으로만 쓰기 때문에
-                          유형에 색을 주면 위험도로 잘못 읽힌다. 배지 모양만 쓰고 색은 중립으로 둔다.
-                        */}
-                        <Badge severity="mid" className="justify-self-start">
-                          {eventTypeLabel(row.type)}
-                        </Badge>
-                        <span className="min-w-0">
-                          <span className="block truncate font-mono text-[12px] text-ink">
-                            {summarize(row)}
-                          </span>
-                          <span className="mt-[2px] block truncate font-mono text-[11px] text-faint">
-                            {row.process || '프로세스 없음'}
-                          </span>
-                        </span>
-                        <span className="font-mono text-[11.5px] text-faint">
-                          {row.ingestedAt === null ? '—' : absoluteTime(row.ingestedAt)}
-                        </span>
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden
-                          className={`text-faint transition-transform ${open ? 'rotate-180' : ''}`}
-                        >
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </button>
-                      {open && (
-                        <Detail
-                          event={row}
-                          onFilterHost={() => change(() => setSearchParams({ host: row.host }))}
-                        />
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </ScrollArea>
-            {moreError && (
-              <div className="mt-[12px] text-center text-[12.5px] text-crit">{moreError}</div>
-            )}
-            {hasMore && (
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="mt-[12px] w-full cursor-pointer rounded-sm border border-line bg-surface px-[14px] py-[9px] text-[12.5px] font-semibold text-ink-2 disabled:cursor-default disabled:text-faint"
+                <AsyncState
+                  loading={pinned.loading}
+                  error={pinned.error}
+                  empty={pinned.data === null}
+                  emptyText="이 이벤트를 찾지 못했습니다"
+                  onRetry={pinned.refetch}
+                >
+                  {pinned.data && <EventFocus event={pinned.data} />}
+                </AsyncState>
+              </>
+            ) : focus ? (
+              // 이벤트가 바뀌면 펼쳐 둔 원본 detail 같은 로컬 상태를 버린다.
+              <EventFocus
+                key={keyOf(focus)}
+                event={focus}
+                onFilterHost={
+                  // 이미 그 호스트로 좁혀 있으면 눌러도 바뀌지 않으니 버튼을 두지 않는다.
+                  host === focus.host
+                    ? undefined
+                    : () => change(() => setSearchParams({ host: focus.host }))
+                }
+              />
+            ) : (
+              <AsyncState
+                loading={loading}
+                error={error}
+                empty
+                emptyText="조건에 맞는 이벤트가 없습니다"
+                onRetry={reload}
               >
-                {loadingMore ? '불러오는 중' : '더 보기'}
-              </button>
+                {null}
+              </AsyncState>
             )}
-          </AsyncState>
+          </Card>
         </div>
-      </Card>
+
+        <aside className="min-w-0">
+          <Card className="overflow-hidden">
+            <div className={panelHead}>
+              <h2 className="text-[14px] font-bold text-ink">이벤트 흐름</h2>
+              <span className="ml-auto font-mono text-[11px] text-faint">
+                최신순 {total === null ? `${rows.length}건` : `${rows.length} / ${total}건`}
+              </span>
+            </div>
+            <AsyncState
+              loading={loading}
+              error={error}
+              empty={rows.length === 0}
+              emptyText="조건에 맞는 이벤트가 없습니다"
+              onRetry={reload}
+            >
+              {/* 유형에는 색을 주지 않는다. 띠는 고른 줄만 강조색, 나머지는 중립 선색이다. */}
+              <FocusList
+                mono
+                className="max-h-[640px]"
+                items={rows.map((row) => {
+                  const key = keyOf(row)
+                  const on = key === (pinnedId || (focus ? keyOf(focus) : null))
+                  return {
+                    key,
+                    color: on ? 'var(--accent)' : 'var(--line)',
+                    title: summarize(row) || row.process || eventTypeLabel(row.type),
+                    sub: `${row.host} · ${eventTypeLabel(row.type)} · ${absoluteTime(row.ts)}`,
+                  }
+                })}
+                currentKey={pinnedId || (focus ? keyOf(focus) : null)}
+                onSelect={select}
+              />
+              {(moreError || hasMore) && (
+                <div className="flex flex-col gap-[10px] border-t border-line-2 px-[12px] py-[12px]">
+                  {moreError && (
+                    <div className="text-center text-[12.5px] text-crit">{moreError}</div>
+                  )}
+                  {hasMore && (
+                    <button
+                      type="button"
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="w-full cursor-pointer rounded-sm border border-line bg-surface px-[14px] py-[9px] text-[12.5px] font-semibold text-ink-2 disabled:cursor-default disabled:text-faint"
+                    >
+                      {loadingMore ? '불러오는 중' : '더 보기'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </AsyncState>
+          </Card>
+        </aside>
+      </section>
     </div>
   )
 }

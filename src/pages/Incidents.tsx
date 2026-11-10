@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { api } from '@/api'
 import { usePagedList } from '@/hooks/usePagedList'
 import type { AlertStatus, Incident } from '@/api/types'
@@ -7,12 +7,13 @@ import ActiveFilters, { type ActiveFilter } from '@/components/ui/ActiveFilters'
 import AsyncState from '@/components/ui/AsyncState'
 import Badge from '@/components/ui/Badge'
 import Card from '@/components/ui/Card'
-import ScrollArea from '@/components/ui/ScrollArea'
 import Select from '@/components/ui/Select'
+import Tag from '@/components/ui/Tag'
 import {
   absoluteTime,
   clockTime,
   relativeTime,
+  severityColors,
   severityLabel,
   severityTone,
   statusLabel,
@@ -44,11 +45,10 @@ const STATUS_OPTIONS = [
   { value: 'false_positive', label: '오탐' },
 ]
 
-// 위협 / 호스트 / 루트 프로세스 / 심각도 / 상태 / 알림 수 / 기간 / 마지막 활동
-const rowGrid = 'grid grid-cols-[1fr_128px_150px_78px_86px_60px_160px_84px] gap-[12px] px-[4px]'
+/** 체인에 세울 탐지 수. 더 많으면 외 N건으로 줄인다. 카드 하나가 화면을 다 덮지 않게 한다. */
+const CHAIN_DETECTIONS = 3
 
 function Incidents() {
-  const navigate = useNavigate()
   const [period, setPeriod] = useState<string>(DEFAULT_PERIOD)
   const [status, setStatus] = useState<string>(ALL_STATUS)
   // 상세에서 트리아지하면 목록도 새 status 로 다시 받아야 한다.
@@ -116,102 +116,159 @@ function Incidents() {
 
       <ActiveFilters filters={activeFilters} />
 
-      <Card>
-        <div className="flex items-baseline justify-between gap-[12px] border-b border-line-2 px-[16px] py-[14px] sm:px-[24px]">
-          <span className="text-[14px] font-bold text-ink">사건 목록</span>
+      {/* 사건마다 카드 한 장. 누르면 상세(계보, 구성 알림, 증거 사슬, 타임라인)로 간다. */}
+      <section aria-label="사건 목록" className="flex flex-col gap-[12px]">
+        <div className="flex items-baseline justify-between gap-[12px] px-[4px]">
+          <h2 className="text-[14px] font-bold text-ink">사건 목록</h2>
           <span className="font-mono text-[12px] text-faint">
             {total === null ? `${rows.length}건` : `${rows.length} / ${total}건`}
           </span>
         </div>
-        <div className="px-[16px] py-[14px] sm:px-[24px] sm:py-[18px]">
-          <AsyncState
-            loading={loading}
-            error={error}
-            empty={rows.length === 0}
-            emptyText="조건에 맞는 사건이 없습니다"
-            onRetry={reload}
-          >
-            <ScrollArea label="사건 목록">
-              <div className="min-w-[1000px]">
-                <div
-                  className={`${rowGrid} pt-2 pb-2 border-b border-line-2 text-[11px] text-faint uppercase tracking-[0.04em]`}
-                >
-                  <span>위협</span>
-                  <span>호스트</span>
-                  <span>루트 프로세스</span>
-                  <span>심각도</span>
-                  <span>상태</span>
-                  <span className="text-right">알림</span>
-                  <span>기간</span>
-                  <span className="text-right">마지막 활동</span>
-                </div>
-                {rows.map((row, i) => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => navigate(`/incidents/${encodeURIComponent(row.id)}`)}
-                    className={`${rowGrid} w-full items-center py-[11px] text-left font-sans cursor-pointer hover:bg-panel rounded-xs ${
-                      i === rows.length - 1 ? '' : 'border-b border-line-2'
-                    }`}
-                  >
-                    {/* 대표 위협명 아래에 detector 룰 원문을 깐다. 조사할 때 대조하는 값은 ruleId 다. */}
-                    <span className="min-w-0">
-                      <span className="block truncate text-[13px] text-ink">
-                        {row.threatNames[0] ?? '위협명 없음'}
-                        {row.threatNames.length > 1 && (
-                          <span className="text-faint"> 외 {row.threatNames.length - 1}건</span>
-                        )}
-                      </span>
-                      <span className="mt-[2px] block truncate font-mono text-[11px] text-faint">
-                        {row.ruleIds.join(', ')}
-                      </span>
-                    </span>
-                    <span className="truncate font-mono text-[12px] text-mid">{row.host}</span>
-                    {/* 빈 문자열은 원본 이벤트를 못 찾았다는 뜻이다. 프로세스명을 지어내지 않는다. */}
-                    <span className="truncate font-mono text-[12px] text-mid">
-                      {row.rootProcess || <span className="font-sans text-faint">확인 불가</span>}
-                    </span>
-                    <Badge severity={severityTone(row.severity)} className="justify-self-start">
-                      {severityLabel(row.severity)}
-                    </Badge>
-                    <Badge severity={statusTone(row.status)} className="justify-self-start">
-                      {statusLabel(row.status)}
-                    </Badge>
-                    <span className="text-right font-mono text-[12px] text-mid">
-                      {row.alertCount}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-mono text-[11.5px] text-ink-2">
-                        {absoluteTime(row.firstTs)}
-                      </span>
-                      <span className="mt-[2px] block truncate font-mono text-[11px] text-faint">
-                        ~ {clockTime(row.lastTs)}
-                      </span>
-                    </span>
-                    <span className="text-right text-[11.5px] text-faint">
-                      {relativeTime(row.lastTs)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-            {moreError && (
-              <div className="mt-[12px] text-center text-[12.5px] text-crit">{moreError}</div>
-            )}
-            {hasMore && (
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="mt-[12px] w-full cursor-pointer rounded-sm border border-line bg-surface px-[14px] py-[9px] text-[12.5px] font-semibold text-ink-2 disabled:cursor-default disabled:text-faint"
-              >
-                {loadingMore ? '불러오는 중' : '더 보기'}
-              </button>
-            )}
-          </AsyncState>
-        </div>
-      </Card>
+        <AsyncState
+          loading={loading}
+          error={error}
+          empty={rows.length === 0}
+          emptyText="조건에 맞는 사건이 없습니다"
+          onRetry={reload}
+        >
+          {rows.map((row) => (
+            <IncidentCard key={row.id} incident={row} />
+          ))}
+          {moreError && <div className="text-center text-[12.5px] text-crit">{moreError}</div>}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full cursor-pointer rounded-sm border border-line bg-surface px-[14px] py-[9px] text-[12.5px] font-semibold text-ink-2 disabled:cursor-default disabled:text-faint"
+            >
+              {loadingMore ? '불러오는 중' : '더 보기'}
+            </button>
+          )}
+        </AsyncState>
+      </section>
     </div>
+  )
+}
+
+/** 사건 카드: 심각도·상태·MITRE, 대표 위협, 호스트·룰, 기간, 그리고 체인. */
+function IncidentCard({ incident }: { incident: Incident }) {
+  const tone = severityTone(incident.severity)
+  const [first, ...rest] = incident.threatNames
+
+  return (
+    <Link
+      to={`/incidents/${encodeURIComponent(incident.id)}`}
+      className="group block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
+    >
+      <Card className="relative grid gap-x-[24px] gap-y-[14px] py-[18px] pl-[24px] pr-[18px] sm:pr-[22px] sm:grid-cols-[minmax(0,1fr)_auto] transition-colors duration-[160ms] group-hover:bg-panel-2">
+        {/* 심각도 띠(2px). 배경 전체를 칠하지 않는다. */}
+        <span
+          aria-hidden
+          className="absolute left-0 top-[18px] bottom-[18px] w-[2px] rounded-full"
+          style={{ background: severityColors[tone] }}
+        />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-[6px]">
+            <Badge severity={tone}>{severityLabel(incident.severity)}</Badge>
+            <Badge severity={statusTone(incident.status)}>{statusLabel(incident.status)}</Badge>
+            {incident.mitre.map((m) => (
+              <Tag key={m}>{m}</Tag>
+            ))}
+          </div>
+          <h3 className="mt-[8px] text-[16px] font-bold leading-[1.35] tracking-[-0.01em] text-ink wrap-anywhere">
+            {first ?? '위협명 없음'}
+            {rest.length > 0 && <span className="font-medium text-faint"> 외 {rest.length}건</span>}
+          </h3>
+          {/* 대표 위협명 아래에 detector 룰 원문을 깐다. 조사할 때 대조하는 값은 ruleId 다. */}
+          <p className="mt-[2px] font-mono text-[12px] text-mid wrap-anywhere">
+            <span className="text-ink-2">{incident.host}</span> · {incident.ruleIds.join(', ')}
+          </p>
+        </div>
+        <div className="font-mono text-[11.5px] text-faint sm:text-right sm:whitespace-nowrap">
+          <b className="mb-[2px] block font-sans text-[13px] font-semibold text-ink-2">
+            {relativeTime(incident.lastTs)}
+          </b>
+          알림 {incident.alertCount} · {absoluteTime(incident.firstTs)} ~{' '}
+          {clockTime(incident.lastTs)}
+        </div>
+        <Chain incident={incident} tone={severityColors[tone]} />
+      </Card>
+    </Link>
+  )
+}
+
+/**
+ * 사건이 어디서 시작해 무엇을 일으켰는지 잇는다.
+ * 목록 응답에는 계보(lineage)가 없어(상세에서만 온다) 루트 프로세스와 거기서 난 탐지만 잇는다.
+ * 루트 프로세스가 비면 원본 이벤트를 못 찾은 것이다. 프로세스명을 지어내지 않고 그렇다고 밝힌다.
+ */
+function Chain({ incident, tone }: { incident: Incident; tone: string }) {
+  if (!incident.rootProcess) {
+    return (
+      <p className="text-[12.5px] leading-[1.5] text-faint sm:col-span-2">
+        이 사건을 이을 관측이 없어 계보를 그리지 못했습니다. 루트 프로세스 확인 불가.
+      </p>
+    )
+  }
+
+  const shown = incident.threatNames.slice(0, CHAIN_DETECTIONS)
+  const more = incident.threatNames.length - shown.length
+
+  return (
+    <ol aria-label="사건 체인" className="flex flex-wrap items-center gap-[8px] sm:col-span-2">
+      <li className="max-w-full">
+        <ChainNode caption="루트 프로세스" title={incident.rootProcess} mono />
+      </li>
+      {shown.length > 0 && (
+        <li aria-hidden className="flex items-center gap-[6px] px-[4px] text-[11px] text-faint">
+          탐지
+          <svg width="22" height="8" viewBox="0 0 22 8" fill="none">
+            <path
+              d="M0 4h20M17 1l3 3-3 3"
+              stroke="var(--line)"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </li>
+      )}
+      {shown.map((name, i) => (
+        <li key={`${name}#${i}`} className="max-w-full">
+          {/* 결과 단계는 아래 2px 를 사건 심각도 색으로 긋는다(DESIGN.md 증거 체인). */}
+          <ChainNode caption="탐지" title={name} underline={tone} />
+        </li>
+      ))}
+      {more > 0 && <li className="px-[4px] text-[12px] text-faint">외 {more}건</li>}
+    </ol>
+  )
+}
+
+function ChainNode({
+  caption,
+  title,
+  mono = false,
+  underline,
+}: {
+  caption: string
+  title: string
+  /** 프로세스명은 mono, 한글 위협명은 본문 글꼴 */
+  mono?: boolean
+  underline?: string
+}) {
+  return (
+    <span
+      className="inline-flex max-w-full flex-col rounded-sm border border-line-2 bg-panel-2 px-[12px] py-[7px]"
+      style={underline ? { borderBottom: `2px solid ${underline}` } : undefined}
+    >
+      <span className="text-[10.5px] text-faint">{caption}</span>
+      <span
+        className={`text-[12.5px] font-semibold text-ink wrap-anywhere ${mono ? 'font-mono' : ''}`}
+      >
+        {title}
+      </span>
+    </span>
   )
 }
 

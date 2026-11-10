@@ -1,22 +1,20 @@
-import { lazy, Suspense, type CSSProperties } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/api'
 import type { Alert, HostSummary } from '@/api/types'
-import Card from '@/components/ui/Card'
+import Card, { panelHead } from '@/components/ui/Card'
+import AttackFlow from '@/components/ui/AttackFlow'
 import Badge from '@/components/ui/Badge'
-import AttackPath from '@/components/ui/AttackPath'
+import FocusList from '@/components/ui/FocusList'
+import Tag from '@/components/ui/Tag'
 import AsyncState from '@/components/ui/AsyncState'
-import ScrollArea from '@/components/ui/ScrollArea'
 import TopThreats from '@/components/ui/TopThreats'
 import TriageActions from '@/components/ui/TriageActions'
 import { useApi } from '@/hooks/useApi'
-import { absoluteTime, daysAgo, percentOf, severityLabel, severityTone } from '@/lib/format'
+import { absoluteTime, daysAgo, severityColors, severityLabel, severityTone } from '@/lib/format'
 import { toAttackSteps } from '@/lib/lineagePath'
 import { useAlertsStore } from '@/store/alerts'
 import { useAuthStore } from '@/store/auth'
-
-// 위협(2줄) / 호스트 / 심각도 / 탐지 시각
-const rowGrid = 'grid grid-cols-[1fr_124px_84px_142px] gap-[12px]'
 
 // echarts 를 쓰는 차트는 지연 경계로 두어 별도 청크에서 온디맨드로 로드한다.
 const ThreatTrendChart = lazy(() => import('@/components/ui/ThreatTrendChart'))
@@ -29,12 +27,16 @@ const chartFallback = (
   </Card>
 )
 
-/** collector 가 붙이는 이벤트 type. 미등록 값은 원문 그대로 보여준다. */
-const eventTypeLabels: Record<string, string> = {
-  process: '프로세스 실행',
-  network: '네트워크 연결',
-  file: '파일 생성·수정',
-  script: '스크립트 실행',
+// 대기열 순서: 심각도가 높은 것 먼저, 같으면 최신이 먼저. 미등록 심각도는 맨 뒤.
+const severityRank: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 }
+function byUrgency(a: Alert, b: Alert) {
+  return (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3) || b.ts - a.ts
+}
+
+/** 수치를 못 받았으면 0 으로 그리지 않는다(decision 010). */
+function statText(value: number | undefined, loading: boolean) {
+  if (value !== undefined) return value.toLocaleString()
+  return loading ? '…' : '확인 불가'
 }
 
 function Dashboard() {
@@ -43,16 +45,19 @@ function Dashboard() {
   // 로그인 전이면 api 가 데모 데이터를 돌려준다(src/api/demo.ts). 배너로 그 사실을 알린다.
   const demo = useAuthStore((s) => s.token === null)
   const open = useApi(() => api.alerts({ status: 'open', limit: 1000 }), [alertsVersion])
-  const recent = useApi(() => api.alerts({ limit: 4 }), [alertsVersion])
   const week = useApi(() => api.alertSummary({ from: daysAgo(7) }))
   const prevWeek = useApi(() => api.alertSummary({ from: daysAgo(14), to: daysAgo(7) }))
   const hosts = useApi(() => api.hostSummary())
   const events = useApi(() => api.eventSummary({ from: daysAgo(1) }))
+  // 대기열에서 고른 위협. 고른 게 없거나 판정돼 빠지면 맨 위 위협으로 돌아간다.
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // 한눈에 보기는 열 때만 그린다. 닫혀 있는 동안 echarts 청크를 받지 않는다.
+  const [glanceOpen, setGlanceOpen] = useState(false)
 
-  const openAlerts = open.data ?? []
-  const openCritical = openAlerts.filter((a) => a.severity === 'CRITICAL').length
-  // 공격 경로는 가장 최근의 미판단 위협 하나를 대표로 보여준다(목록은 최신순).
-  const featured = openAlerts[0] ?? null
+  const queue = [...(open.data ?? [])].sort(byUrgency)
+  const focus = queue.find((a) => a.id === selectedId) ?? queue[0] ?? null
+  const openCritical = queue.filter((a) => a.severity === 'CRITICAL').length
+  const allClear = !open.loading && !open.error && focus === null
 
   /*
     서버는 정상인데 등록된 호스트가 하나도 없으면 아직 에이전트가 아무것도 보내지 않은 상태다.
@@ -64,7 +69,6 @@ function Dashboard() {
         onRetry={() => {
           hosts.refetch()
           open.refetch()
-          recent.refetch()
           week.refetch()
         }}
       />
@@ -72,161 +76,123 @@ function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-[20px]">
+    <div className="flex flex-col gap-[16px]">
       {demo && <DemoBanner />}
-      {/* stat tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-[16px]">
-        <div className="bg-surface border border-line rounded-md p-[18px]">
-          <div className="text-[12px] text-faint">미판단 위협</div>
-          <AsyncState loading={open.loading} error={open.error} onRetry={open.refetch}>
-            <div className="flex items-center gap-[9px] mt-[10px]">
-              <span className="font-mono text-[28px] font-medium text-ink tabular-nums">
-                {openAlerts.length}
-              </span>
+
+      {/*
+        포커스: 왼쪽 위협 하나 크게, 오른쪽 대기열과 엔드포인트.
+        2열은 xl(1280) 부터. 1100 에서는 사이드바 224px 까지 빠져 왼쪽 카드가 460px 남짓이라
+        판정 버튼 줄이 카드 밖으로 밀려난다(2단계 화면 확인).
+      */}
+      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-[16px] items-start">
+        <div className="flex flex-col gap-[12px] min-w-0">
+          {focus ? (
+            // 위협이 바뀌면 판정 버튼의 확인 단계 같은 로컬 상태를 버려야 한다.
+            <FocusThreat key={focus.id} alert={focus} />
+          ) : allClear ? (
+            <>
+              <AllClear />
+              <Suspense fallback={chartFallback}>
+                <ThreatTrendChart />
+              </Suspense>
+              <EndpointCard state={hosts} large />
+            </>
+          ) : (
+            <Card className="px-[18px] py-[20px] sm:px-[28px] sm:py-[26px]">
+              <AsyncState loading={open.loading} error={open.error} onRetry={open.refetch}>
+                {null}
+              </AsyncState>
+            </Card>
+          )}
+        </div>
+
+        <aside className="flex flex-col gap-[12px] min-w-0">
+          <Card className="overflow-hidden">
+            <div className={panelHead}>
+              <h2 className="text-[14px] font-bold text-ink">대기열</h2>
+              <span className="font-mono text-[11px] text-faint">미판단 {queue.length}</span>
               {openCritical > 0 && (
-                <Badge severity="crit" className="!py-[2px] !px-2">
+                <Badge severity="crit" className="ml-auto">
                   심각 {openCritical}
                 </Badge>
               )}
             </div>
-          </AsyncState>
-        </div>
-        <div className="bg-surface border border-line rounded-md p-[18px]">
-          <div className="text-[12px] text-faint">이번 주 탐지</div>
-          <AsyncState loading={week.loading} error={week.error} onRetry={week.refetch}>
-            <div className="flex items-baseline gap-[5px] mt-[10px]">
-              <span className="font-mono text-[28px] font-medium text-ink tabular-nums">
-                {week.data?.total ?? 0}
-              </span>
-              <WeekDelta current={week.data?.total} previous={prevWeek.data?.total} />
-            </div>
-          </AsyncState>
-        </div>
-      </div>
-
-      {/* main grid */}
-      {/*
-        2열은 xl 부터. lg(1024) 에서는 사이드바 224px 이 함께 나타나 콘텐츠가 744px 로 줄어드는데,
-        그 폭을 둘로 쪼개면 어느 쪽도 충분하지 않다.
-        fr 은 minmax(auto, fr) 이라 콘텐츠가 트랙을 밀어내므로 minmax(0, fr) 로 고정한다.
-      */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-[20px] items-start">
-        {/* LEFT column */}
-        <div className="flex flex-col gap-[20px]">
-          <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
             <AsyncState
               loading={open.loading}
               error={open.error}
-              empty={featured === null}
-              emptyText="미판단 위협이 없습니다"
+              empty={queue.length === 0}
+              emptyText="대기열이 비어 있습니다"
               onRetry={open.refetch}
             >
-              {featured && <FeaturedPath alert={featured} />}
+              {/* 미판단 위협 목록. 누르면 왼쪽이 그 위협으로 바뀐다. */}
+              <FocusList
+                items={queue.map((a) => ({
+                  key: a.id,
+                  color: severityColors[severityTone(a.severity)],
+                  title: a.threatName,
+                  sub: `${a.host} · ${absoluteTime(a.ts)}`,
+                  srLabel: severityLabel(a.severity),
+                }))}
+                currentKey={focus?.id ?? null}
+                onSelect={setSelectedId}
+              />
             </AsyncState>
           </Card>
+          {/* 위협이 없을 때는 왼쪽에 크게 보여주므로 여기서는 뺀다. */}
+          {!allClear && <EndpointCard state={hosts} />}
+        </aside>
+      </section>
 
-          <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
-            <div className="flex justify-between items-center mb-[14px]">
-              <span className="text-[14px] font-bold text-ink">최근 탐지된 위협</span>
-              <Link to="/threats" className="text-[12px] font-semibold !text-accent">
-                전체 보기 →
-              </Link>
-            </div>
-            <AsyncState
-              loading={recent.loading}
-              error={recent.error}
-              empty={(recent.data ?? []).length === 0}
-              emptyText="탐지된 위협이 없습니다"
-              onRetry={recent.refetch}
-            >
-              <ScrollArea label="최근 탐지된 위협 목록">
-                <div className="min-w-[620px]">
-                  <div
-                    className={`${rowGrid} py-2 border-b border-line-2 text-[11px] text-faint uppercase tracking-[0.04em]`}
-                  >
-                    <span>위협</span>
-                    <span>호스트</span>
-                    <span>심각도</span>
-                    <span className="text-right">탐지 시각</span>
-                  </div>
-                  {(recent.data ?? []).map((row, i, all) => (
-                    <div
-                      key={row.id}
-                      className={`${rowGrid} items-center py-[10px] ${
-                        i === all.length - 1 ? '' : 'border-b border-line-2'
-                      }`}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] text-ink">
-                          {row.threatName}
-                        </span>
-                        <span className="mt-[2px] block truncate font-mono text-[11px] text-faint">
-                          {row.ruleId}
-                        </span>
-                      </span>
-                      <span className="font-mono text-[12px] text-mid">{row.host}</span>
-                      <Badge severity={severityTone(row.severity)} className="justify-self-start">
-                        {severityLabel(row.severity)}
-                      </Badge>
-                      <span className="text-right font-mono text-[11px] text-faint">
-                        {absoluteTime(row.ts)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </AsyncState>
-          </Card>
+      {/* 한눈에 보기: 기본은 닫힘 */}
+      <details className="group" onToggle={(e) => setGlanceOpen(e.currentTarget.open)}>
+        <summary className="flex items-baseline gap-[10px] px-[4px] py-[6px] list-none cursor-pointer rounded-sm text-[15px] font-bold text-ink [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">
+          <span
+            aria-hidden
+            className="self-center w-[7px] h-[7px] border-r-[1.5px] border-b-[1.5px] border-mid -rotate-45 transition-transform duration-[160ms] group-open:rotate-45"
+          />
+          한눈에 보기
+          <span className="text-[12px] font-normal text-faint">최근 7일 추이와 많이 나온 위협</span>
+        </summary>
+        {glanceOpen && (
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-[12px] mt-[10px] items-start">
+            <Suspense fallback={chartFallback}>
+              <ThreatTrendChart />
+            </Suspense>
+            <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
+              <div className="flex justify-between items-center mb-[18px]">
+                <span className="text-[14px] font-bold text-ink">위협 유형 TOP 5</span>
+                <span className="text-[11.5px] text-faint">최근 7일</span>
+              </div>
+              <AsyncState
+                loading={week.loading}
+                error={week.error}
+                empty={(week.data?.topThreats ?? []).length === 0}
+                emptyText="집계할 위협이 없습니다"
+                onRetry={week.refetch}
+              >
+                {week.data && <TopThreats threats={week.data.topThreats} total={week.data.total} />}
+              </AsyncState>
+            </Card>
+          </div>
+        )}
+      </details>
+
+      {/* 수집 수치 한 줄 */}
+      <section className="flex flex-wrap gap-x-[32px] gap-y-[8px] px-[4px] py-[6px] text-[12px] text-mid">
+        <div className="flex items-center gap-[8px]">
+          <b className="font-mono text-[14px] font-semibold text-ink tabular-nums">
+            {statText(events.data?.total, events.loading)}
+          </b>
+          <span>24시간 이벤트</span>
         </div>
-
-        {/* RIGHT column */}
-        <div className="flex flex-col gap-[20px]">
-          <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
-            <div className="text-[14px] font-bold text-ink mb-[18px]">엔드포인트 상태</div>
-            <AsyncState loading={hosts.loading} error={hosts.error} onRetry={hosts.refetch}>
-              {hosts.data && <HostDonut summary={hosts.data} />}
-            </AsyncState>
-          </Card>
-
-          <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
-            <div className="text-[14px] font-bold text-ink mb-[18px]">위협 유형 TOP 5</div>
-            <AsyncState
-              loading={week.loading}
-              error={week.error}
-              empty={(week.data?.topThreats ?? []).length === 0}
-              emptyText="집계할 위협이 없습니다"
-              onRetry={week.refetch}
-            >
-              {week.data && <TopThreats threats={week.data.topThreats} total={week.data.total} />}
-            </AsyncState>
-          </Card>
+        <div className="flex items-center gap-[8px]">
+          <b className="font-mono text-[14px] font-semibold text-ink tabular-nums">
+            {statText(week.data?.total, week.loading)}
+          </b>
+          <span>이번 주 탐지</span>
+          <WeekDelta current={week.data?.total} previous={prevWeek.data?.total} />
         </div>
-      </div>
-
-      {/* 위협 탐지 추이 (full-width) */}
-      <Suspense fallback={chartFallback}>
-        <ThreatTrendChart />
-      </Suspense>
-
-      {/* 요약 보기에서 흡수: 대시보드에 없던 이벤트 상세만 남긴다 */}
-      <div className="text-[13px] font-bold text-ink-2 pt-[4px] border-t border-line-2">
-        이벤트 상세
-      </div>
-      <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
-        <div className="flex justify-between items-center mb-[18px]">
-          <span className="text-[14px] font-bold text-ink">이벤트 유형별 건수</span>
-          <span className="text-[11.5px] text-faint">최근 24시간</span>
-        </div>
-        <AsyncState
-          loading={events.loading}
-          error={events.error}
-          empty={(events.data?.byType ?? []).length === 0}
-          emptyText="수집된 이벤트가 없습니다"
-          onRetry={events.refetch}
-        >
-          <EventCounts byType={events.data?.byType ?? []} />
-        </AsyncState>
-      </Card>
+      </section>
     </div>
   )
 }
@@ -278,119 +244,140 @@ function WeekDelta({ current, previous }: { current?: number; previous?: number 
   if (current === undefined || !previous) return null
   const delta = Math.round(((current - previous) / previous) * 100)
   return (
-    <span className={`text-[12px] ${delta >= 0 ? 'text-crit' : 'text-good'}`}>
+    <span className={`font-mono text-[11px] ${delta >= 0 ? 'text-crit' : 'text-good'}`}>
       {delta >= 0 ? '+' : ''}
       {delta}%
     </span>
   )
 }
 
-function FeaturedPath({ alert }: { alert: Alert }) {
+/** 가장 먼저 볼 위협 하나: 머리 정보, 세로 공격 흐름, 권고와 판정 버튼. */
+function FocusThreat({ alert }: { alert: Alert }) {
   const { data, loading, error, refetch } = useApi(() => api.lineage(alert.id), [alert.id])
   const steps = data ? toAttackSteps(data) : []
 
   return (
-    <>
-      <AsyncState
-        loading={loading}
-        error={error}
-        empty={steps.length === 0}
-        emptyText="이 알림 시각 주변에 재구성할 이벤트가 없습니다"
-        onRetry={refetch}
-      >
-        <AttackPath host={alert.host} label={`${alert.threatName} 시퀀스`} steps={steps} />
-      </AsyncState>
+    <Card className="px-[18px] py-[20px] sm:px-[28px] sm:py-[26px]">
+      <div className="flex flex-wrap items-center gap-[8px]">
+        <Badge severity={severityTone(alert.severity)}>{severityLabel(alert.severity)}</Badge>
+        {alert.mitre && <Tag>{alert.mitre}</Tag>}
+        <span className="ml-auto font-mono text-[12px] text-mid tabular-nums">
+          {absoluteTime(alert.ts)}
+        </span>
+      </div>
+      <h2 className="mt-[16px] text-[24px] sm:text-[30px] font-bold leading-[1.25] tracking-[-0.03em] text-ink">
+        {alert.threatName}
+      </h2>
+      <p className="mt-[4px] text-[13px] text-mid wrap-anywhere">
+        <span className="font-mono font-semibold text-ink">{alert.host}</span> ·{' '}
+        <span className="font-mono">{alert.ruleId}</span>
+      </p>
+
+      <div className="mt-[24px]">
+        <AsyncState
+          loading={loading}
+          error={error}
+          empty={steps.length === 0}
+          emptyText="이 알림 시각 주변에 재구성할 이벤트가 없습니다"
+          onRetry={refetch}
+        >
+          <AttackFlow steps={steps} />
+        </AsyncState>
+      </div>
+
       <TriageActions alert={alert} detailTo="/threats" />
-    </>
+    </Card>
   )
 }
 
-function HostDonut({ summary }: { summary: HostSummary }) {
-  const total = summary.total
-  const healthyEnd = total > 0 ? (summary.healthy / total) * 100 : 0
-  const warningEnd = total > 0 ? healthyEnd + (summary.warning / total) * 100 : 0
-  const criticalEnd = total > 0 ? warningEnd + (summary.critical / total) * 100 : 0
-  // 나머지(criticalEnd ~ 100%)가 noEvents 조각이다.
+/** 처리할 위협이 없을 때의 머리. 없는 수치를 지어내지 않는다. */
+function AllClear() {
+  return (
+    <Card className="px-[20px] py-[24px] sm:px-[34px] sm:py-[30px]">
+      <Badge severity="good">처리할 위협 없음</Badge>
+      <h2 className="mt-[18px] text-[26px] sm:text-[34px] font-bold leading-[1.2] tracking-[-0.035em] text-ink">
+        지금 처리할 위협이 없습니다
+      </h2>
+      <p className="mt-[6px] text-[14px] text-mid">새 위협이 탐지되면 여기에 바로 띄웁니다.</p>
+    </Card>
+  )
+}
 
-  const legend = [
-    { label: '정상', value: summary.healthy, color: 'bg-good' },
-    { label: '주의', value: summary.warning, color: 'bg-high' },
-    { label: '위험', value: summary.critical, color: 'bg-crit' },
-    // 등록만 되고 이벤트가 없는 기기다. "정상" 색(초록)을 쓰면 검증 안 된 상태를 좋다고
-    // 말하는 셈이라 중립색으로 따로 둔다.
-    { label: '수집 없음', value: summary.noEvents, color: 'bg-faint' },
-  ]
+type EndpointCardProps = {
+  state: ReturnType<typeof useApi<HostSummary>>
+  /** 위협이 없을 때 왼쪽에 크게 보여준다. */
+  large?: boolean
+}
+
+/** 엔드포인트 상태: 총 대수, 상태별 가로 분할 막대, 범례. */
+function EndpointCard({ state, large = false }: EndpointCardProps) {
+  const summary = state.data
+  const parts = summary
+    ? [
+        { label: '정상', value: summary.healthy, color: 'var(--good)' },
+        { label: '주의', value: summary.warning, color: 'var(--med)' },
+        { label: '위험', value: summary.critical, color: 'var(--crit)' },
+        // 등록만 되고 이벤트가 없는 기기다. "정상" 색(초록)을 쓰면 검증 안 된 상태를 좋다고
+        // 말하는 셈이라 중립색으로 따로 둔다.
+        { label: '수집 없음', value: summary.noEvents, color: 'var(--faint)' },
+      ]
+    : []
 
   return (
-    <div className="flex items-center gap-[16px] sm:gap-[22px]">
+    <Card className="overflow-hidden">
+      <div className={panelHead}>
+        <h2 className="text-[14px] font-bold text-ink">엔드포인트 상태</h2>
+      </div>
       <div
-        className="relative w-[104px] h-[104px] flex-shrink-0 rounded-full"
-        style={{
-          background:
-            total > 0
-              ? `conic-gradient(var(--good) 0 ${healthyEnd}%, var(--high) ${healthyEnd}% ${warningEnd}%, var(--crit) ${warningEnd}% ${criticalEnd}%, var(--faint) ${criticalEnd}% 100%)`
-              : 'var(--panel)',
-        }}
+        className={large ? 'px-[18px] py-[20px] sm:px-[28px] sm:py-[24px]' : 'px-[18px] py-[16px]'}
       >
-        <div
-          className="absolute inset-[-5px] rounded-full"
-          style={
-            {
-              background:
-                'conic-gradient(from 0deg, transparent 70%, var(--accent) 93%, transparent 100%)',
-              WebkitMask:
-                'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
-              mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
-              animation: 'edrRingSpin 5s linear infinite',
-            } as CSSProperties
-          }
-        />
-        <div className="absolute inset-[13px] rounded-full bg-surface flex flex-col items-center justify-center">
-          <span className="font-mono text-[22px] font-medium text-ink tabular-nums leading-none">
-            {total}
-          </span>
-          <span className="text-[10px] text-faint mt-[2px]">총 엔드포인트</span>
-        </div>
+        <AsyncState loading={state.loading} error={state.error} onRetry={state.refetch}>
+          {summary && (
+            <>
+              <div className="flex items-baseline gap-[8px]">
+                <span
+                  className={`font-mono font-semibold leading-none tracking-[-0.03em] text-ink tabular-nums ${
+                    large ? 'text-[40px]' : 'text-[30px]'
+                  }`}
+                >
+                  {summary.total}
+                </span>
+                <span className="text-[13px] text-mid">대 관리 중</span>
+              </div>
+              <div
+                aria-hidden
+                className={`flex gap-[2px] mt-[14px] mb-[16px] rounded-xs overflow-hidden bg-panel ${
+                  large ? 'h-[14px]' : 'h-[10px]'
+                }`}
+              >
+                {parts.map(
+                  (p) =>
+                    p.value > 0 && (
+                      <span key={p.label} style={{ flex: p.value, background: p.color }} />
+                    ),
+                )}
+              </div>
+              <div
+                className={`grid gap-[9px] ${large ? 'grid-cols-2 gap-x-[24px] sm:grid-cols-4' : ''}`}
+              >
+                {parts.map((p) => (
+                  <div key={p.label} className="flex items-center gap-[8px] text-[13px] text-ink-2">
+                    <span
+                      className="w-[8px] h-[8px] flex-none rounded-full"
+                      style={{ background: p.color }}
+                    />
+                    <span className="whitespace-nowrap">{p.label}</span>
+                    <span className="ml-auto font-mono font-semibold text-ink tabular-nums">
+                      {p.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </AsyncState>
       </div>
-      <div className="flex flex-col gap-[11px] flex-1 min-w-0">
-        {legend.map((item) => (
-          <div key={item.label} className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${item.color}`} />
-            <span className="text-[13px] text-ink-2 whitespace-nowrap">{item.label}</span>
-            <span className="font-mono text-[13px] text-ink ml-auto tabular-nums">
-              {item.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** 막대 길이는 가장 많은 type 을 100%로 잡은 상대 비율. 백엔드가 cnt 내림차순으로 준다. */
-function EventCounts({ byType }: { byType: { type: string; cnt: number | string }[] }) {
-  const counts = byType.map((row) => ({ type: row.type, count: Number(row.cnt) }))
-  const max = Math.max(...counts.map((c) => c.count))
-
-  return (
-    <div className="flex flex-col gap-[15px]">
-      {counts.map((row) => (
-        <div key={row.type} className="flex flex-col gap-[7px]">
-          <div className="flex justify-between gap-[10px] text-[13px]">
-            <span className="text-ink-2 truncate">{eventTypeLabels[row.type] ?? row.type}</span>
-            <span className="font-mono tabular-nums text-ink flex-shrink-0">
-              {row.count.toLocaleString()}
-            </span>
-          </div>
-          <div className="h-[7px] rounded-xs bg-panel overflow-hidden">
-            <div
-              className="h-full rounded-xs bg-good"
-              style={{ width: `${percentOf(row.count, max)}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
+    </Card>
   )
 }
 

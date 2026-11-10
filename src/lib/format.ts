@@ -25,6 +25,14 @@ export function absoluteTime(ts: number): string {
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+/** epoch millis 를 "11-02 09:14"(seconds 면 "11-02 09:14:02") 로. 표 한 칸에 들어가도록 연도를 뺀다. */
+export function shortTime(ts: number, seconds = false): string {
+  const d = new Date(ts)
+  const p = (n: number) => String(n).padStart(2, '0')
+  const hm = `${p(d.getHours())}:${p(d.getMinutes())}`
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${seconds ? `${hm}:${p(d.getSeconds())}` : hm}`
+}
+
 /** epoch millis 를 "09:14:02" 로. 시안이 모노 숫자 표기라 ko-KR 의 "9시 14분" 형식은 쓰지 않는다. */
 export function clockTime(ts: number): string {
   const d = new Date(ts)
@@ -38,12 +46,12 @@ export function daysAgo(days: number, now = Date.now()): number {
   return now - days * DAY
 }
 
-type Tone = 'crit' | 'high' | 'mid' | 'accent' | 'good'
+type Tone = 'crit' | 'high' | 'med' | 'mid' | 'accent' | 'good'
 
 const severityTones: Record<AlertSeverity, Tone> = {
   CRITICAL: 'crit',
   HIGH: 'high',
-  MEDIUM: 'mid',
+  MEDIUM: 'med',
 }
 
 const severityLabels: Record<AlertSeverity, string> = {
@@ -52,7 +60,7 @@ const severityLabels: Record<AlertSeverity, string> = {
   MEDIUM: '보통',
 }
 
-/** 미등록 severity 는 보통(mid)으로 떨어뜨린다. */
+/** 미등록 severity 는 회색(mid)으로 떨어뜨린다. */
 export function severityTone(severity: string): Tone {
   return severityTones[severity as AlertSeverity] ?? 'mid'
 }
@@ -120,9 +128,10 @@ const hostStatusLabels: Record<HostStatus, string> = {
   critical: '위험',
 }
 
+// 주의는 심각도 높음(주황)이 아니라 보통(노랑)과 같은 색이다(DESIGN.md 2장).
 const hostStatusColors: Record<HostStatus, string> = {
   healthy: 'var(--good)',
-  warning: 'var(--high)',
+  warning: 'var(--med)',
   critical: 'var(--crit)',
 }
 
@@ -137,6 +146,7 @@ export function hostStatusColor(status: string): string {
 export const severityColors: Record<Tone, string> = {
   crit: 'var(--crit)',
   high: 'var(--high)',
+  med: 'var(--med)',
   mid: 'var(--mid)',
   accent: 'var(--accent)',
   good: 'var(--good)',

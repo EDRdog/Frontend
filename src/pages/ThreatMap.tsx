@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as echarts from 'echarts'
 import ReactECharts from 'echarts-for-react'
 import { feature } from 'topojson-client'
@@ -8,18 +8,9 @@ import { Link } from 'react-router-dom'
 import { api } from '@/api'
 import type { GeoDestination } from '@/api/types'
 import AsyncState from '@/components/ui/AsyncState'
-import Card from '@/components/ui/Card'
+import Card, { panelHead } from '@/components/ui/Card'
 import { useApi } from '@/hooks/useApi'
 import { useThemeStore } from '@/store/theme'
-
-function SectionTitle({ title, note }: { title: string; note: string }) {
-  return (
-    <div>
-      <div className="text-[15px] font-bold text-ink tracking-[-0.01em]">{title}</div>
-      <div className="mt-[5px] text-[12.5px] leading-[1.6] text-faint">{note}</div>
-    </div>
-  )
-}
 
 /**
  * 지도 가운데에 둘 경도. 한국(127°E)에서 보는 지도라 태평양 중심으로 돌린다.
@@ -133,31 +124,27 @@ type Palette = {
   area: string
   border: string
   text: string
+  surface: string
   crit: string
-  high: string
+  med: string
   mid: string
   accent: string
 }
 
-const palettes: Record<'dark' | 'light', Palette> = {
-  dark: {
-    area: '#1C2735',
-    border: '#3C4B5E',
-    text: '#C4CDD6',
-    crit: '#F0645C',
-    high: '#F2CB45',
-    mid: '#93A0AD',
-    accent: '#5B78FF',
-  },
-  light: {
-    area: '#E7ECF3',
-    border: '#B9C4D2',
-    text: '#35404C',
-    crit: '#E5484D',
-    high: '#EAB308',
-    mid: '#545E6B',
-    accent: '#2B4DE0',
-  },
+/** echarts 캔버스는 CSS 변수를 못 읽는다. 지금 테마의 토큰 실측값을 읽어 넘긴다. */
+function readPalette(): Palette {
+  const style = getComputedStyle(document.documentElement)
+  const read = (name: string) => style.getPropertyValue(`--${name}`).trim()
+  return {
+    area: read('panel'),
+    border: read('line'),
+    text: read('ink-2'),
+    surface: read('surface'),
+    crit: read('crit'),
+    med: read('med'),
+    mid: read('mid'),
+    accent: read('accent'),
+  }
 }
 
 /**
@@ -168,7 +155,7 @@ function countColor(count: number, max: number, p: Palette): string {
   if (max <= 0) return p.mid
   const ratio = count / max
   if (ratio >= 0.6) return p.crit
-  if (ratio >= 0.25) return p.high
+  if (ratio >= 0.25) return p.med
   return p.mid
 }
 
@@ -197,12 +184,17 @@ function buildOption(dests: GeoDestination[], p: Palette): echarts.EChartsOption
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: p.area,
+      backgroundColor: p.surface,
       borderColor: p.border,
       textStyle: { color: p.text, fontSize: 12 },
     },
     geo: {
       map: 'world',
+      // 기본값은 상자의 80% 만 쓴다. 포커스 배치에서는 지도가 주인공이라 상자를 거의 다 쓴다.
+      top: 8,
+      bottom: 8,
+      left: 8,
+      right: 8,
       // 작은 나라(한국·싱가포르 등)를 읽을 수 있게 확대만 허용. 드래그 이동은 막는다.
       roam: 'scale',
       scaleLimit: { min: 1, max: 6 },
@@ -306,7 +298,13 @@ function useMiddleDragPan(
 function GeoSection() {
   const theme = useThemeStore((s) => s.theme)
   const geo = useApi(() => api.geoDestinations())
-  const p = palettes[theme]
+  const [p, setP] = useState(readPalette)
+
+  // data-theme 는 App(부모)의 effect 가 붙인다. 부모 effect 가 나중에 돌므로 다음 프레임에 읽는다.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setP(readPalette()))
+    return () => cancelAnimationFrame(id)
+  }, [theme])
 
   // 백엔드가 정렬을 보장하지 않으므로 건수 내림차순으로 다시 세운다.
   const byCountry = useMemo(
@@ -319,6 +317,7 @@ function GeoSection() {
     보여주면 자기 조직 데이터로 오해하고 정작 필요한 안내(에이전트 연결)가 가려진다.
   */
   const empty = byCountry.length === 0
+  const showMap = !geo.loading && !geo.error && !empty
 
   const option = useMemo(() => buildOption(byCountry, p), [byCountry, p])
 
@@ -334,55 +333,75 @@ function GeoSection() {
   const totalCount = useMemo(() => byCountry.reduce((sum, d) => sum + d.count, 0), [byCountry])
 
   return (
-    <section className="flex flex-col gap-[16px]">
-      <SectionTitle
-        title="외부 통신 지도"
-        note="최근 24시간 외부 연결의 목적지를 국가별로 봅니다. 사설 IP 는 제외됩니다."
-      />
+    /* 포커스: 왼쪽 지도 크게, 오른쪽 국가 순위와 요약. 2열은 대시보드와 같이 xl(1280) 부터. */
+    <section className="grid grid-cols-1 items-start gap-[16px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <Card className="min-w-0 px-[14px] py-[16px] sm:px-[24px] sm:py-[22px]">
+        {/* 지도 머리: 제목, 조회 조건, 원위치 */}
+        <div className="mb-[12px] flex flex-wrap items-baseline gap-x-[12px] gap-y-[4px]">
+          <h2 className="text-[17px] font-bold tracking-[-0.02em] text-ink">외부 통신 지도</h2>
+          <span className="text-[12px] text-faint">최근 24시간 · 사설 IP 제외</span>
+          {showMap && (
+            <button
+              type="button"
+              onClick={resetView}
+              className="ml-auto cursor-pointer rounded-sm px-[10px] py-[5px] font-sans text-[12px] font-semibold text-mid transition-colors duration-[140ms] hover:bg-panel hover:text-ink"
+            >
+              원위치
+            </button>
+          )}
+        </div>
 
-      <div className="grid grid-cols-1 items-start gap-[16px] lg:grid-cols-[minmax(0,1fr)_300px]">
-        <Card className="px-[10px] py-[10px] sm:px-[14px] sm:py-[14px]">
-          <AsyncState loading={geo.loading} error={geo.error} onRetry={geo.refetch}>
-            {empty ? (
-              <div className="flex flex-col items-center justify-center gap-[8px] px-[20px] py-[140px] text-center">
-                <div className="text-[14px] font-semibold text-ink-2">
-                  아직 수집된 외부 연결이 없습니다
-                </div>
-                <div className="max-w-[42ch] text-[13px] leading-[1.6] text-faint">
-                  엔드포인트를 연결하면 외부로 나간 연결의 목적지가 여기에 그려집니다. 서버에 GeoIP
-                  DB 가 없으면 연결이 쌓여도 비어 있습니다.
-                </div>
-                <Link
-                  to="/onboarding"
-                  className="mt-[8px] rounded-sm border border-line bg-surface px-[14px] py-[8px] text-[12.5px] font-semibold !text-ink-2"
-                >
-                  수집 알림 연동
-                </Link>
+        <AsyncState loading={geo.loading} error={geo.error} onRetry={geo.refetch}>
+          {empty ? (
+            <div className="flex flex-col items-center justify-center gap-[8px] px-[20px] py-[120px] text-center">
+              <div className="text-[14px] font-semibold text-ink-2">
+                아직 수집된 외부 연결이 없습니다
               </div>
-            ) : (
-              <div ref={boxRef} className="relative">
-                <button
-                  type="button"
-                  onClick={resetView}
-                  className="absolute top-[6px] right-[6px] z-[1] cursor-pointer rounded-sm border border-line bg-surface px-[10px] py-[5px] font-sans text-[12px] font-semibold text-ink-2"
-                >
-                  원위치
-                </button>
+              <div className="max-w-[42ch] text-[13px] leading-[1.6] text-faint">
+                엔드포인트를 연결하면 외부로 나간 연결의 목적지가 여기에 그려집니다. 서버에 GeoIP DB
+                가 없으면 연결이 쌓여도 비어 있습니다.
+              </div>
+              <Link
+                to="/onboarding"
+                className="mt-[8px] rounded-sm border border-line bg-surface px-[14px] py-[8px] text-[12.5px] font-semibold !text-ink-2"
+              >
+                수집 알림 연동
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* 지도 높이는 폭을 따른다(세계지도 비율 16:10). 고정 높이면 좁은 화면에서 위아래가 빈 칸이 된다. */}
+              <div ref={boxRef} className="aspect-[16/10] max-h-[640px]">
                 <ReactECharts
                   ref={chartRef}
                   option={option}
                   notMerge
-                  style={{ height: 560, width: '100%' }}
+                  style={{ height: '100%', width: '100%' }}
                   opts={{ renderer: 'canvas' }}
                 />
               </div>
-            )}
-          </AsyncState>
-        </Card>
+              {/* 범례: 점 색과 크기는 최다 국가 대비 건수 비중이다(countColor, markerSize). */}
+              <div className="mt-[12px] flex flex-wrap gap-x-[18px] gap-y-[6px] text-[12px] text-mid">
+                <span className="inline-flex items-center gap-[6px]">
+                  <span aria-hidden className="h-[8px] w-[8px] rounded-full bg-accent" />
+                  서울 (감시 조직)
+                </span>
+                <span className="inline-flex items-center gap-[6px]">
+                  <span aria-hidden className="h-[8px] w-[8px] rounded-full bg-crit" />
+                  목적지 국가 · 점이 크고 붉을수록 연결이 많습니다
+                </span>
+              </div>
+            </>
+          )}
+        </AsyncState>
+      </Card>
 
-        <div className="flex flex-col gap-[16px]">
-          <Card className="px-[16px] py-[18px] sm:px-[20px] sm:py-[20px]">
-            <div className="mb-[16px] text-[14px] font-bold text-ink">국가별 연결 건수</div>
+      <aside className="flex min-w-0 flex-col gap-[12px]">
+        <Card className="overflow-hidden">
+          <div className={panelHead}>
+            <h2 className="text-[14px] font-bold text-ink">국가별 연결 건수</h2>
+          </div>
+          <div className="px-[18px] py-[16px]">
             <AsyncState
               loading={geo.loading}
               error={geo.error}
@@ -390,12 +409,15 @@ function GeoSection() {
               emptyText="집계할 연결이 없습니다"
               onRetry={geo.refetch}
             >
-              <div className="flex flex-col gap-[13px]">
+              {/* 국가가 많아도 오른쪽 열이 지도보다 길어지지 않게 안에서 스크롤한다. */}
+              <div className="flex max-h-[420px] flex-col gap-[12px] overflow-y-auto pr-[2px]">
                 {byCountry.map((row) => (
-                  <div key={row.country} className="flex flex-col gap-[6px]">
-                    <div className="flex justify-between gap-[10px] text-[13px]">
+                  <div key={row.country}>
+                    <div className="mb-[5px] flex justify-between gap-[10px] text-[12px]">
                       <span className="truncate text-ink-2">{row.country}</span>
-                      <span className="shrink-0 font-mono tabular-nums text-ink">{row.count}</span>
+                      <span className="shrink-0 font-mono font-semibold tabular-nums text-ink">
+                        {row.count.toLocaleString()}
+                      </span>
                     </div>
                     <div className="h-[6px] overflow-hidden rounded-xs bg-panel">
                       <div
@@ -407,11 +429,15 @@ function GeoSection() {
                 ))}
               </div>
             </AsyncState>
-          </Card>
+          </div>
+        </Card>
 
-          {/* 백엔드가 국가 집계만 주므로 개별 연결(호스트·IP·시각) 목록은 만들 수 없다. 요약으로 대체. */}
-          <Card className="px-[16px] py-[18px] sm:px-[20px] sm:py-[20px]">
-            <div className="mb-[16px] text-[14px] font-bold text-ink">요약</div>
+        {/* 백엔드가 국가 집계만 주므로 개별 연결(호스트·IP·시각) 목록은 만들 수 없다. 요약으로 대체. */}
+        <Card className="overflow-hidden">
+          <div className={panelHead}>
+            <h2 className="text-[14px] font-bold text-ink">요약</h2>
+          </div>
+          <div className="px-[18px] py-[16px]">
             <AsyncState
               loading={geo.loading}
               error={geo.error}
@@ -419,37 +445,27 @@ function GeoSection() {
               emptyText="집계할 연결이 없습니다"
               onRetry={geo.refetch}
             >
-              <div className="flex flex-col gap-[14px]">
-                <div className="flex items-baseline justify-between gap-[10px]">
-                  <span className="text-[13px] text-ink-2">전체 연결</span>
-                  <span className="shrink-0 font-mono text-[13px] tabular-nums text-ink">
-                    {totalCount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-[10px]">
-                  <span className="text-[13px] text-ink-2">관측 국가</span>
-                  <span className="shrink-0 font-mono text-[13px] tabular-nums text-ink">
-                    {byCountry.length}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-[10px]">
-                  <span className="text-[13px] text-ink-2">최다 목적지</span>
-                  <span className="truncate text-[13px] text-ink">
-                    {byCountry[0]?.country ?? '-'}
-                  </span>
-                </div>
-              </div>
+              <dl className="m-0 grid grid-cols-[104px_minmax(0,1fr)] gap-x-[16px] gap-y-[9px] text-[12px]">
+                <dt className="text-faint">전체 연결</dt>
+                <dd className="m-0 font-mono tabular-nums text-ink-2">
+                  {totalCount.toLocaleString()}
+                </dd>
+                <dt className="text-faint">관측 국가</dt>
+                <dd className="m-0 font-mono tabular-nums text-ink-2">{byCountry.length}</dd>
+                <dt className="text-faint">최다 목적지</dt>
+                <dd className="m-0 truncate text-ink-2">{byCountry[0]?.country ?? '-'}</dd>
+              </dl>
             </AsyncState>
-          </Card>
-        </div>
-      </div>
+          </div>
+        </Card>
+      </aside>
     </section>
   )
 }
 
 function ThreatMap() {
   return (
-    <div className="flex flex-col gap-[32px]">
+    <div className="flex flex-col gap-[20px]">
       <div>
         <div className="text-[18px] font-bold tracking-[-0.01em] text-ink sm:text-[20px]">
           위협 지도

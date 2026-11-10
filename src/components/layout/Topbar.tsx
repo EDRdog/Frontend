@@ -35,6 +35,9 @@ const titles: Record<string, string> = {
   '/intelligence': '관계 분석',
   '/lookup': 'IP·도메인 조회',
   '/onboarding': '수집 알림 연동',
+  '/audit': '감사기록',
+  '/selftest': '자체점검',
+  '/settings': '설정',
 }
 
 type Crumb = { label: string; to?: string }
@@ -54,7 +57,8 @@ function trailOf(pathname: string): Crumb[] {
       { label: decodeURIComponent(pathname.slice('/endpoints/'.length)) },
     ]
   }
-  const title = titles[pathname]
+  // 설정은 탭마다 주소가 다르지만 제목은 하나다.
+  const title = titles[pathname.startsWith('/settings') ? '/settings' : pathname]
   return title ? [{ label: title }] : []
 }
 
@@ -83,7 +87,7 @@ function Topbar({ onMenuOpen }: TopbarProps) {
   const navigate = useNavigate()
   const trail = trailOf(pathname)
   const pageTitle = trail.at(-1)?.label ?? 'EDRdog'
-  const themeLabel = theme === 'dark' ? '라이트' : '다크'
+  const themeAction = theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'
   const isDemo = useAuthStore((s) => s.token) === null
 
   const alertsVersion = useAlertsStore((s) => s.version)
@@ -207,7 +211,7 @@ function Topbar({ onMenuOpen }: TopbarProps) {
           </span>
           {/* 같은 이유로 배지는 sm 부터. 데모라는 사실은 사이드바 하단에도 적혀 있다. */}
           {isDemo && (
-            <span className="hidden sm:inline-flex flex-shrink-0 text-[11px] font-semibold text-high bg-[var(--high-wash)] px-[8px] py-[2px] rounded-full whitespace-nowrap">
+            <span className="hidden sm:inline-flex flex-shrink-0 text-[11px] font-semibold text-med bg-[color-mix(in_srgb,currentColor_var(--wash),transparent)] px-[8px] py-[2px] rounded-full whitespace-nowrap">
               예시 데이터
             </span>
           )}
@@ -418,9 +422,13 @@ function Topbar({ onMenuOpen }: TopbarProps) {
               <path d="M8 16H3v5" />
             </svg>
           </button>
+          {/* 테마 전환은 아이콘 하나. 다크일 때 해(주황), 라이트일 때 달(파랑)을 보여준다. */}
           <button
+            type="button"
             onClick={toggle}
-            className="inline-flex flex-shrink-0 items-center gap-[7px] h-[34px] pl-[11px] pr-[11px] sm:pr-[14px] rounded-sm border border-line bg-surface text-ink font-sans text-[12.5px] font-semibold cursor-pointer"
+            aria-label={themeAction}
+            title={themeAction}
+            className="inline-flex flex-shrink-0 items-center justify-center w-[34px] h-[34px] rounded-sm border border-line bg-surface cursor-pointer"
           >
             <span data-om-sun className="items-center text-high">
               <svg
@@ -451,12 +459,11 @@ function Topbar({ onMenuOpen }: TopbarProps) {
                 <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
               </svg>
             </span>
-            <span className="hidden sm:inline">{themeLabel}</span>
           </button>
           {isDemo && (
             <Link
               to="/login"
-              className="inline-flex flex-shrink-0 items-center h-[34px] px-[13px] sm:px-[15px] rounded-sm bg-accent !text-white font-sans text-[12.5px] font-semibold cursor-pointer"
+              className="inline-flex flex-shrink-0 items-center h-[34px] px-[13px] sm:px-[15px] rounded-pill bg-accent hover:bg-accent-strong active:translate-y-px !text-white font-sans text-[12.5px] font-semibold cursor-pointer"
             >
               로그인
             </Link>

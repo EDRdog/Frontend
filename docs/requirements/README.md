@@ -33,3 +33,5 @@ ERD = Engineering Requirements Document (DB 관계도 아님). PRD(`docs/product
 | `investigation.md` | 조사 | 알림·호스트·이벤트·사건 목록과 상세 |
 | `analysis.md` | 분석 | 관계 그래프, IP·도메인 조회, 위협 지도 |
 | `response.md` | 대응·온보딩 | 조치 실행과 결과 폴링, 설치 안내, 알림 설정 |
+| `security.md` | 보안 기능 관리 | 비밀번호, 보안정책, 관리 IP, 계정, 감사기록, 자체점검, 강제 변경, viewer 권한 |
+| `landing.md` | 랜딩 | 스크롤 연출, 테마, 번들 분리, 정리, 모바일 |

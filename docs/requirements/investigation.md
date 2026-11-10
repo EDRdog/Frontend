@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | INV-11 | `script` 유형이 `process` 와 같은 규칙으로 요약된다 | 인터프리터 실행 이벤트를 목록에서 본다 | `docs/design-docs/failures/007-script-events-dumped-raw-json.md` | 수동 |
 | INV-12 | 모르는 유형이 와도 원본 JSON 을 요약 칸에 뿌리지 않는다 | 백엔드가 새 유형을 내보낼 때 확인 | `docs/design-docs/failures/007-script-events-dumped-raw-json.md` | 수동 |
-| INV-13 | 행을 펼치면 상세 필드와 원본 JSON 을 볼 수 있다 | 이벤트 행 클릭 | `docs/product-specs/service.md` F4 | 수동 |
+| INV-13 | 고른 이벤트의 상세 필드와 원본 JSON 을 볼 수 있다 | 오른쪽 이벤트 흐름에서 항목 클릭 | `docs/product-specs/service.md` F4 | 수동 |
 | INV-14 | 검색 결과에서 특정 이벤트로 바로 들어갈 수 있다 | 검색 → 이벤트 선택 | `docs/product-specs/service.md` F8 | 수동 |
 
 ## 사건
