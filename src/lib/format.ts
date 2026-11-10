@@ -25,6 +25,14 @@ export function absoluteTime(ts: number): string {
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+/** epoch millis 를 "11-02 09:14"(seconds 면 "11-02 09:14:02") 로. 표 한 칸에 들어가도록 연도를 뺀다. */
+export function shortTime(ts: number, seconds = false): string {
+  const d = new Date(ts)
+  const p = (n: number) => String(n).padStart(2, '0')
+  const hm = `${p(d.getHours())}:${p(d.getMinutes())}`
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${seconds ? `${hm}:${p(d.getSeconds())}` : hm}`
+}
+
 /** epoch millis 를 "09:14:02" 로. 시안이 모노 숫자 표기라 ko-KR 의 "9시 14분" 형식은 쓰지 않는다. */
 export function clockTime(ts: number): string {
   const d = new Date(ts)
