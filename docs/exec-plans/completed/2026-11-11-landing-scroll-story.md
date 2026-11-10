@@ -1,4 +1,4 @@
-# #103 랜딩을 스크롤 스토리텔링으로 교체
+# #103 랜딩을 스크롤 스토리텔링으로 교체 (끝남, PR #106)
 
 - 시안: `docs/design-docs/previews/landing-v2.html` (다크), `landing-v2-light.html` (라이트)
 - 설계: `docs/design-docs/landing-v2.md`

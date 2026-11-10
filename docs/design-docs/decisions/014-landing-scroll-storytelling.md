@@ -27,6 +27,6 @@
 - `index.html` 의 JetBrains Mono 에 굵기 600 을 추가했다(랜딩 숫자와 라벨이 600 을 쓴다).
 
 ## 관련
-- `docs/design-docs/landing-v2.md`, `docs/exec-plans/active/103-landing-scroll-story.md`
+- `docs/design-docs/landing-v2.md`, `docs/exec-plans/completed/2026-11-11-landing-scroll-story.md`
 - `docs/requirements/landing.md`, `DESIGN.md` 2장, 6장
-- ADR 013 (`docs/design-docs/decisions/013-redesign-direction.md`)
+- ADR 015 (`docs/design-docs/decisions/015-redesign-direction.md`)

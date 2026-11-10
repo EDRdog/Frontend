@@ -1,6 +1,6 @@
 # EDRdog 디자인 시스템
 
-보안 관제 콘솔. 차분한 무채색 위에서 위험한 것만 색으로 튀게 한다. 결정 배경은 `docs/design-docs/decisions/013-redesign-direction.md`, 화면 시안은 `docs/design-docs/previews/`.
+보안 관제 콘솔. 차분한 무채색 위에서 위험한 것만 색으로 튀게 한다. 결정 배경은 `docs/design-docs/decisions/015-redesign-direction.md`, 화면 시안은 `docs/design-docs/previews/`.
 
 ## 1. 분위기
 - 콘솔(대시보드): 정밀하고 조용하다. 장식보다 정보 밀도와 위계로 완성도를 낸다.
