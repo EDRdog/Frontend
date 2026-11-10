@@ -483,10 +483,80 @@ export type SearchResults = {
   events: SearchSection<SearchEvent>
 }
 
+export type Role = 'admin' | 'viewer'
+
 export type AuthResponse = {
   token: string
   userId: number
   tenantId: number
   email: string
-  role: string
+  role: Role
+  /** true 면 비밀번호를 바꾸기 전에는 변경·로그아웃·내 정보 말고는 서버가 403(password_change_required)을 준다. */
+  mustChangePassword: boolean
+}
+
+/** GET·PUT /api/auth/security-policy. 범위는 서버가 정한다(연속 실패 1~5, 잠금 5~1440분, 유휴 1~60분). */
+export type SecurityPolicy = {
+  maxLoginFailures: number
+  lockMinutes: number
+  idleMinutes: number
+}
+
+export type AdminIp = {
+  id: number
+  ip: string
+  /** epoch millis */
+  createdAt: number
+  createdBy: string
+}
+
+/** 허용 IP 목록. 비어 있으면 접속 제한이 없다. yourIp 는 서버가 본 지금 요청의 접속 IP. */
+export type AdminIps = {
+  allowedIps: AdminIp[]
+  yourIp: string
+}
+
+/** POST /api/tenant/users 응답. 비밀번호는 오지 않는다. */
+export type CreatedUser = {
+  id: number
+  email: string
+  role: Role
+}
+
+/** 감사기록 한 줄. 사건 유형은 서버와 에이전트가 같은 칸을 쓰므로 유니온으로 좁히지 않는다. */
+export type AuditRecord = {
+  id: number
+  /** epoch millis */
+  ts: number
+  tenantId: number | null
+  actorType: 'user' | 'agent' | 'system'
+  actorUserId: number | null
+  /** 유저 이메일 또는 host. */
+  actor: string
+  type: string
+  target: string | null
+  result: 'success' | 'failure'
+  detail: string | null
+  ip: string | null
+}
+
+export type SelfTestStatus = 'PASS' | 'FAIL' | 'SKIP'
+
+export type SelfTestItem = {
+  category: 'selftest' | 'integrity'
+  name: string
+  status: SelfTestStatus
+  detail: string
+}
+
+/** 서버 자체시험과 무결성 검증 한 번의 결과. */
+export type SelfTestRun = {
+  id: number
+  trigger: 'STARTUP' | 'SCHEDULED' | 'MANUAL'
+  /** 항목 하나라도 FAIL 이면 FAIL. */
+  status: SelfTestStatus
+  /** 서버가 Instant 로 준다. 직렬화 형식에 기대지 않도록 new Date() 로 읽는다. */
+  startedAt: string | number
+  requestedBy: string | null
+  items: SelfTestItem[]
 }

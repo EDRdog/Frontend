@@ -35,6 +35,9 @@ const titles: Record<string, string> = {
   '/intelligence': '관계 분석',
   '/lookup': 'IP·도메인 조회',
   '/onboarding': '수집 알림 연동',
+  '/audit': '감사기록',
+  '/selftest': '자체점검',
+  '/settings': '설정',
 }
 
 type Crumb = { label: string; to?: string }
@@ -54,7 +57,8 @@ function trailOf(pathname: string): Crumb[] {
       { label: decodeURIComponent(pathname.slice('/endpoints/'.length)) },
     ]
   }
-  const title = titles[pathname]
+  // 설정은 탭마다 주소가 다르지만 제목은 하나다.
+  const title = titles[pathname.startsWith('/settings') ? '/settings' : pathname]
   return title ? [{ label: title }] : []
 }
 

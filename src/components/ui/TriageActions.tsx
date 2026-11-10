@@ -4,6 +4,7 @@ import { api } from '@/api'
 import type { Alert } from '@/api/types'
 import { statusLabel } from '@/lib/format'
 import { useAlertsStore } from '@/store/alerts'
+import { useAuthStore } from '@/store/auth'
 
 /**
  * detector 가 severity 로 정하는 권고 대응(notify|kill|isolate).
@@ -30,6 +31,8 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
   const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bump = useAlertsStore((s) => s.bump)
+  // viewer 는 판단하지 못한다. 서버도 403 을 주므로 화면은 버튼을 숨기기만 한다.
+  const viewer = useAuthStore((s) => s.user?.role === 'viewer')
 
   async function triage(status: 'confirmed' | 'false_positive') {
     setPending(status)
@@ -67,7 +70,11 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
           </Link>
         )}
 
-        {alert.status !== 'open' ? (
+        {viewer ? (
+          <span className="whitespace-nowrap text-[12px] text-mid">
+            조회 전용 계정입니다. 대응과 판단은 admin 이 합니다.
+          </span>
+        ) : alert.status !== 'open' ? (
           <span className="flex-1 sm:flex-none text-center whitespace-nowrap text-[13px] font-semibold text-mid border border-line px-[16px] py-[10px] rounded-sm">
             {statusLabel(alert.status)}
           </span>

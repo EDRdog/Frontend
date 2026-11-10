@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuthStore } from '@/store/auth'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 
 function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
+  const sessionEnded = useAuthStore((s) => s.sessionEnded)
+  const mustChangePassword = useAuthStore((s) => s.user?.mustChangePassword === true)
 
   // 라우트가 바뀌면 드로어를 닫는다
   useEffect(() => {
@@ -31,6 +34,11 @@ function AppLayout() {
       document.body.style.overflow = prevOverflow
     }
   }, [menuOpen])
+
+  // 서버가 세션을 끝냈다(유휴 종료, 다른 곳 로그인, 만료). 데모로 조용히 떨어지지 않고 로그인 화면으로 보낸다.
+  if (sessionEnded) return <Navigate to="/login" state={{ from: pathname }} replace />
+  // 기본 비밀번호를 바꾸기 전에는 서버가 다른 API 를 403 으로 막는다. 이 셸 안의 어느 화면도 쓸 수 없다.
+  if (mustChangePassword) return <Navigate to="/password-change" replace />
 
   return (
     <div className="flex min-h-screen bg-bg font-sans text-ink transition-colors">

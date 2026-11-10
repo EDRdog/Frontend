@@ -17,7 +17,7 @@
 개인 설정은 보여줄 "예시" 가 없다. 남의 webhook 주소를 지어내 보여줄 수는 없으니 그쪽만 닫아 둔다.
 
 ## 결과/영향
-- **`src/components/RequireAuth.tsx` 가 죽은 코드로 남았다.** 어디서도 import 되지 않는다. 지우지 않아서 다음 사람이 살아 있는 가드로 읽을 수 있다(`docs/exec-plans/tech-debt.md`).
+- **`src/components/RequireAuth.tsx` 가 죽은 코드로 남았다.** 어디서도 import 되지 않는다. 지우지 않아서 다음 사람이 살아 있는 가드로 읽을 수 있다(`docs/exec-plans/tech-debt.md`). 2026-11-11 에 [013](013-kisa-security-screens-show-server-rules.md) 이 데모가 없는 화면에 한해 다시 쓰기 시작했다.
 - 데모와 실데이터의 차이가 버그를 가린 적이 있다. 지도가 없는 경로를 부르고 있었는데 데모에서는 `demoApi` 가 응답해서 드러나지 않았다(`docs/design-docs/failures/006-*`).
 - 데모 상태와 로그인 상태의 빈 화면 정책이 다르다. 로그인 상태에서는 예시로 채우지 않는다([010](010-no-fake-empty-state.md)).
 

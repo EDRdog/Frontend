@@ -235,6 +235,8 @@ function TriageBox({ incident, onTriaged }: SummaryProps) {
   const [asking, setAsking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bump = useAlertsStore((s) => s.bump)
+  // viewer 는 판단하지 못한다. 서버도 403 을 주므로 화면은 숨기기만 한다.
+  const viewer = useAuthStore((s) => s.user?.role === 'viewer')
 
   async function triage(status: 'confirmed' | 'false_positive') {
     setPending(status)
@@ -258,6 +260,8 @@ function TriageBox({ incident, onTriaged }: SummaryProps) {
       setPending(null)
     }
   }
+
+  if (viewer) return null
 
   return (
     <div className="mt-[20px] flex flex-col gap-[12px] rounded-md border border-line-2 bg-panel px-[14px] py-[14px] sm:flex-row sm:items-center sm:gap-[16px] sm:px-[18px] sm:py-[16px]">
@@ -620,6 +624,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 /** 실제 조치(kill) 실행. 확인 단계를 거친 뒤 api-service 를 경유해 실행한다. */
 function RealAction({ alert }: { alert: Alert }) {
   const isDemo = useAuthStore((s) => s.token) === null
+  // viewer 는 대응하지 못한다. 서버도 403 을 주므로 화면은 숨기기만 한다.
+  const viewer = useAuthStore((s) => s.user?.role === 'viewer')
   // 종료 대상 프로세스는 alert.matched 의 실행 체인 말단 프로세스. 없으면 실행 불가.
   const target = killTarget(alert.matched)
   const [phase, setPhase] = useState<'idle' | 'confirm' | 'pending'>('idle')
@@ -677,6 +683,8 @@ function RealAction({ alert }: { alert: Alert }) {
       if (alive.current) setPhase('idle')
     }
   }
+
+  if (viewer) return null
 
   return (
     <div className="mt-[12px] px-[14px] py-[14px] sm:px-[18px] sm:py-[16px] bg-panel-2 border border-line-2 rounded-md">
