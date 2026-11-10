@@ -634,6 +634,16 @@
     .fl-ts b { font-size: 11.5px; }
     .fl-stamp { padding-left: 14px; }
     .fl-stamp b { font-size: 20px; }
+    /* 낮은 폰(667px 등): 줄이면 글자가 11px 아래로 내려가므로 부수 요소를 빼고 콘솔을 좁고 낮게 그린다 */
+    @media (max-height: 700px) {
+      .fl-win { --ah: 76px; --hh: 52px; width: 350px; height: 484px; }
+      .fl-tl { height: 64px; gap: 10px; padding: 0 10px; }
+      .fl-stamp { padding-left: 10px; }
+      .fl-bar, .fl-host dl, .fl-rows .fl-row:nth-child(n + 4), .fl-step p { display: none; }
+      .fl-body { height: 100%; }
+      .fl-steps { padding-bottom: 0; }
+      .fl-row.fl-hr, .fl-strip .fl-lv b, .fl-host > div small { font-size: 11px; }
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .fl-live::after, .fl-spin { animation: none; }

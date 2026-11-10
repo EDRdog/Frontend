@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { gsap, ScrollTrigger, prefersReduced, cssVar, rgbOf, onThemeChange } from './utils'
 
 // 입자: 빛줄기 점(dot)과 차선을 따라 흐르는 글자 조각(chip)
+type Lane = { u: number; z: number; v: number; list: Particle[] }
 type Particle = {
   chip: boolean; z: number; u: number; x: number; y: number; v: number
-  st: number; t: number; vy: number; s: number; sev: number; w: number; ln?: any
+  st: number; t: number; vy: number; s: number; sev: number; w: number; ln?: Lane
 }
 
 // 히어로: 이벤트 흐름 → 탐지 → 대시보드. 스크롤 하나에 세 장면이 이어진다.
@@ -140,7 +141,7 @@ function Hero() {
     function reset(p: Particle, x: number) {
       p.x = x; p.st = 0; p.t = 0; p.vy = 0
       if (!p.chip) { p.u = rnd(); p.v = SPEED * (0.4 + p.z) * (0.85 + rnd() * 0.3); return }
-      p.u = p.ln.u; p.v = p.ln.v
+      p.u = p.ln!.u; p.v = p.ln!.v
       p.s = (rnd() * EV.length) | 0
       p.w = sprites.length ? sprites[0][p.s].w * chipScale(p.z) : 200
     }
@@ -148,7 +149,7 @@ function Hero() {
     function respawn(p: Particle) {
       if (!p.chip) return reset(p, -30 - rnd() * W * 0.25)
       let left = W
-      for (const q of p.ln.list) if (q !== p && q.st === 0) left = Math.min(left, q.x - q.w)
+      for (const q of p.ln!.list) if (q !== p && q.st === 0) left = Math.min(left, q.x - q.w)
       reset(p, 0)
       p.x = Math.min(-20, left - 36 - rnd() * 160)
     }

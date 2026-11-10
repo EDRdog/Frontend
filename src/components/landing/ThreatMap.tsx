@@ -295,8 +295,10 @@ function ThreatMap() {
       drawHome(800)
     }
 
-    const arcs: any[] = [],
-      rings: any[] = []
+    type Arc = { s: Src; t0: number; dur: number; landed: boolean }
+    type Ring = { x: number; y: number; col: string; t0: number; dur: number; r: number }
+    const arcs: Arc[] = [],
+      rings: Ring[] = []
     let revealAt = -1,
       nextSpawn = 0
     const TAIL = 0.34
@@ -461,7 +463,8 @@ function ThreatMap() {
     }
     const bad = (k: string) => k === 'high' || k === 'crit'
 
-    function edgePath(a: any, b: any) {
+    type Box = { x: number; y: number; w: number; h: number; k: string }
+    function edgePath(a: Box, b: Box) {
       const dx = b.x - a.x,
         dy = b.y - a.y
       if (Math.abs(dy) < 1) {
@@ -485,8 +488,18 @@ function ThreatMap() {
       return l
     }
 
+    // 그려 둔 그래프의 조각들: 장면과 신호 애니메이션이 이걸 움직인다
+    type Graph = {
+      nodes: SVGElement[]
+      edges: { p: SVGPathElement; lab: SVGElement }[]
+      mal: SVGPathElement[]
+      hl: SVGElement[]
+      off: SVGElement[]
+      ctx: SVGElement[]
+      pk: { c: SVGElement; p: SVGPathElement; len: number }[]
+    }
     // 화면 폭에 맞는 그래프를 새로 그린다
-    function build(desk: boolean) {
+    function build(desk: boolean): Graph {
       const S = desk
         ? { w: 756, h: 440, f: 13, cw: 7.8, nh: 54, tg: 9, pad: 28, ef: 9.5 }
         : { w: 360, h: 402, f: 11, cw: 6.6, nh: 46, tg: 8.5, pad: 22, ef: 8.5 }
@@ -497,8 +510,8 @@ function ThreatMap() {
         gL = mk('g', {}, svg),
         gP = mk('g', {}, svg),
         gN = mk('g', {}, svg)
-      const G: any = { nodes: [], edges: [], mal: [], hl: [], off: [], ctx: [], pk: [] }
-      const at: Record<string, any> = {}
+      const G: Graph = { nodes: [], edges: [], mal: [], hl: [], off: [], ctx: [], pk: [] }
+      const at: Record<string, Box> = {}
       for (const n of NODES) {
         const pos = desk ? n.d : n.m
         if (!pos) continue
@@ -586,12 +599,13 @@ function ThreatMap() {
     }
 
     // 스크롤 장면: 모으기 -> 잇기 -> 판정
-    function scene(G: any, desk: boolean) {
+    function scene(G: Graph, desk: boolean) {
       // 좁은 화면은 단계 목록이 그래프와 함께 보이지 않으므로 목록은 그대로 둔다
       // 좁은 화면은 단계 목록을 움직이지 않으므로 값만 받는 빈 객체로 대신한다
       const dummy = () => Array.from({ length: 3 }, () => ({ opacity: 0, scaleX: 0 }))
-      const steps: any[] = desk ? $$('.mp-steps li') : dummy()
-      const bars: any[] = desk ? steps.map((li) => li.querySelector('i')) : dummy()
+      type Target = HTMLElement | { opacity: number; scaleX: number }
+      const steps: Target[] = desk ? $$('.mp-steps li') : dummy()
+      const bars: Target[] = desk ? $$('.mp-steps li').map((li) => li.querySelector('i')!) : dummy()
       const tl = gsap.timeline({ defaults: { ease: 'none' } })
       tl.set(steps, { opacity: 0.38 }, 0).set(bars, { scaleX: 0 }, 0)
       tl.to(steps[0], { opacity: 1, duration: 0.1 }, 0)
@@ -617,7 +631,7 @@ function ThreatMap() {
         { opacity: 1, duration: 0.1 },
         1,
       )
-      G.edges.forEach((e: any, i: number) => {
+      G.edges.forEach((e, i) => {
         tl.to(e.p, { strokeDashoffset: 0, duration: 0.32 }, 1 + i * 0.13)
         tl.to(e.lab, { opacity: 1, duration: 0.12 }, 1.24 + i * 0.13)
       })
@@ -632,7 +646,7 @@ function ThreatMap() {
       // 좁은 화면에는 무관한 노드가 없다
       if (G.off.length) tl.to(G.off, { opacity: 0.14, duration: 0.4 }, P)
       tl.to(G.ctx, { opacity: 0.6, duration: 0.4 }, P)
-      G.mal.forEach((o: any, i: number) =>
+      G.mal.forEach((o, i) =>
         tl.to(o, { strokeDashoffset: 0, duration: 0.3, ease: 'power1.inOut' }, P + 0.1 + i * 0.2),
       )
       tl.to(G.hl, { opacity: 1, duration: 0.25, stagger: 0.06 }, P + 0.1)
@@ -648,19 +662,19 @@ function ThreatMap() {
     }
 
     // 판정이 끝나면 악성 경로 위로 신호가 흐른다
-    let G: any = null,
+    let G: Graph | null = null,
       relHi = false
     function drawPackets(t: number) {
       if (!G) return
-      G.pk.forEach((k: any, i: number) => {
+      G.pk.forEach((k, i) => {
         if (!relHi) {
-          k.c.style.opacity = 0
+          k.c.style.opacity = '0'
           return
         }
         const e = (t / 1700 + i * 0.23) % 1
         const pt = k.p.getPointAtLength(e * k.len)
         k.c.setAttribute('transform', `translate(${pt.x} ${pt.y})`)
-        k.c.style.opacity = Math.sin(e * Math.PI)
+        k.c.style.opacity = String(Math.sin(e * Math.PI))
       })
     }
 
