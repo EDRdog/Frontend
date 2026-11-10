@@ -17,10 +17,10 @@
 | SH-4 | 로그인 없이 조회 탭이 열리고 데모 데이터가 보인다 | 로그아웃 상태로 `/threats` 등을 연다 | `docs/design-docs/decisions/002-demo-without-login.md` | 수동 |
 | SH-5 | 새로고침해도 로그인이 유지된다 | 로그인 후 새로고침 | `docs/product-specs/service.md` F1 | 수동 |
 | SH-6 | localStorage 값이 깨져 있으면 로그아웃 상태로 시작한다 | 값을 임의로 망가뜨리고 새로고침 | `src/store/auth.ts` 주석 | 수동 |
-| SH-7 | 토큰 만료(401)면 로그아웃된다 | 토큰을 지우고 조회 요청 | `ARCHITECTURE.md` 서버 통신 | 수동 |
+| SH-7 | 세션이 끝나면(401) 로그아웃되고 로그인 화면으로 간다 | 토큰을 망가뜨리고 조회 요청. 상세는 `security.md` KS-4 | `ARCHITECTURE.md` 서버 통신 | 수동 |
 | SH-8 | `/tenant/` 의 401 은 로그아웃시키지 않고 원인을 보여준다 | 틀린 `VITE_API_KEY` 로 온보딩 설정 저장 | `docs/design-docs/failures/003-api-key-401-mistaken-for-expiry.md` | 수동 |
 | SH-9 | 비로그인 상태에서 `/me/*`, `/tenant/*` 를 호출하지 않는다 | 로그아웃 상태로 네트워크 탭 확인 | `docs/design-docs/decisions/002-demo-without-login.md` | 수동 |
-| SH-10 | 보호 라우트 가드가 배선돼 있다 | `RequireAuth` 가 어디서도 import 되지 않는다 | `docs/exec-plans/tech-debt.md` | 미충족 |
+| SH-10 | 데모가 없는 화면에만 `RequireAuth` 가 걸려 있고, 조회 탭에는 없다 | 로그아웃 상태로 `/settings` 는 로그인으로, `/threats` 는 데모로 열린다 | `docs/design-docs/decisions/013-kisa-security-screens-show-server-rules.md` | 수동 |
 
 ## 새로고침
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
+import RequireAuth from '@/components/RequireAuth'
 import { useThemeStore } from '@/store/theme'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
@@ -11,6 +12,10 @@ import EndpointDetail from '@/pages/EndpointDetail'
 import Events from '@/pages/Events'
 import Incidents from '@/pages/Incidents'
 import IncidentDetail from '@/pages/IncidentDetail'
+import ForcePassword from '@/pages/ForcePassword'
+import Settings from '@/pages/Settings'
+import AuditLog from '@/pages/AuditLog'
+import SelfTest from '@/pages/SelfTest'
 
 // gsap 은 랜딩에서만 쓰므로 랜딩을 지연 로드해 다른 화면 번들에 들어오지 않게 한다.
 const Landing = lazy(() => import('@/pages/Landing'))
@@ -47,6 +52,10 @@ function App() {
         }
       />
       <Route path="/login" element={<Login />} />
+      {/* 기본 비밀번호를 바꿔야 하는 계정이 머무는 화면. 셸 없이 이것만 보인다. */}
+      <Route element={<RequireAuth />}>
+        <Route path="/password-change" element={<ForcePassword />} />
+      </Route>
       {/* 대시보드는 로그인 없이도 열린다. 토큰이 없으면 데모 데이터를 그린다(src/api/demo.ts). */}
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -83,6 +92,13 @@ function App() {
             </Suspense>
           }
         />
+        {/* 데모가 없는 화면은 로그인해야 열린다. admin 만 쓰는 화면이라 viewer 에게는 서버가 403 을 준다. */}
+        <Route element={<RequireAuth />}>
+          <Route path="/audit" element={<AuditLog />} />
+          <Route path="/selftest" element={<SelfTest />} />
+          <Route path="/settings" element={<Navigate to="/settings/password" replace />} />
+          <Route path="/settings/:tab" element={<Settings />} />
+        </Route>
         {/*
           없어진 탭들. 북마크와 예전 링크가 죽지 않도록 흡수한 화면으로 보낸다.
           위협 지도와 요약 보기는 관계 분석·대시보드의 섹션이 됐고, 시퀀스 분석은 사건이 대신한다.

@@ -35,7 +35,9 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 
 ## 라우트
 
-`AppLayout` 밖: `/`(Landing), `/login`. 나머지는 전부 `AppLayout` 안이다. `Landing` 은 gsap 때문에 `lazy()` 로 별도 청크다(ADR `docs/design-docs/decisions/014-landing-scroll-storytelling.md`).
+`AppLayout` 밖: `/`(Landing), `/login`, `/password-change`. 나머지는 전부 `AppLayout` 안이다. `Landing` 은 gsap 때문에 `lazy()` 로 별도 청크다(ADR `docs/design-docs/decisions/014-landing-scroll-storytelling.md`).
+
+`/settings/*`, `/audit`, `/selftest`, `/password-change` 는 데모가 없어 `RequireAuth` 로 감싼다. 토큰이 없으면 로그인 화면으로 간다. 나머지 조회 탭은 로그인 없이 열린다.
 
 | 경로 | 화면 |
 |---|---|
@@ -48,6 +50,10 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 | `/lookup` | IP·도메인 조회. 상관 그래프 + 실시간 DNS |
 | `/map` | 위협 지도. echarts 세계지도 |
 | `/onboarding` | 에이전트 설치, Slack webhook, 내 기기 등록 |
+| `/settings/:tab` | 비밀번호 변경, 보안정책, 관리 IP, 계정(`password` `policy` `ip` `accounts`). 탭 본문은 `src/pages/settings/` |
+| `/audit` | 감사기록. 필터, 정렬, 쪽 이동 |
+| `/selftest` | 서버 자체시험과 무결성 검증 |
+| `/password-change` | 기본 비밀번호 강제 변경. `AppLayout` 밖이라 셸이 없다 |
 
 `/report`, `/sequence`, `/operations` 는 없어진 탭이라 각각 `/dashboard`, `/incidents`, `/onboarding` 으로 리다이렉트한다. 북마크와 예전 링크를 죽이지 않으려고 남겨 둔 것이다.
 
@@ -57,7 +63,7 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 
 | 스토어 | 들고 있는 것 | 비고 |
 |---|---|---|
-| `auth` | `token`, `user` | localStorage 를 직접 읽고 쓴다. zustand `persist` 는 안 쓴다 |
+| `auth` | `token`, `user`(`role`, `mustChangePassword` 포함), `sessionEnded` | localStorage 를 직접 읽고 쓴다. zustand `persist` 는 안 쓴다. `sessionEnded` 는 저장하지 않는다 |
 | `alerts` | `version`, `bump()` | 트리아지 후 재조회 신호. 데이터는 안 들고 있다 |
 | `refresh` | `version`, `lastAt`, `interval` | 전역 새로고침 신호. 기본값은 **꺼짐** |
 | `theme` | `dark` / `light` | 최초값은 `prefers-color-scheme` 추종. 저장하지 않는다 |
@@ -73,19 +79,24 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 | 인증 | `Authorization: Bearer <token>` + 항상 `X-API-Key`(`VITE_API_KEY`) |
 | 목록 페이지 정보 | 응답 헤더 `X-Total-Count`, `X-Has-More`, `X-Time-From`, `X-Time-To` |
 | 네트워크 실패 | status 0 + `UNREACHABLE` 로 변환. 5xx 도 같게 취급 |
-| 401 | 로그아웃시킨다. 단 `/tenant/` 경로는 예외 |
+| 401 | 세션이 끝난 것이라 로그아웃시키고 로그인 화면으로 보낸다(`sessionEnded`). 단 `/tenant/` 경로에서 본문이 `X-API-Key` 를 말하면 예외 |
+| 403 + `code: password_change_required` | 기본 비밀번호를 안 바꾼 계정이다. `auth.user.mustChangePassword` 를 켜면 `AppLayout` 이 `/password-change` 로 보낸다 |
 
-`/tenant/` 의 401 만 예외인 이유는 그게 토큰 만료가 아니라 `X-API-Key` 불일치일 수 있어서다. 그 경우 재로그인해도 해결되지 않는데 로그아웃시키면 사용자가 같은 일을 반복한다.
+`/tenant/` 의 `X-API-Key` 401 만 예외인 이유는 그게 세션 종료가 아니라 키 불일치라서다. 그 경우 재로그인해도 해결되지 않는데 로그아웃시키면 사용자가 같은 일을 반복한다. 같은 `/tenant/` 경로에서도 세션이 끝난 401 은 본문이 헤더 이름을 말하지 않으므로 로그아웃시킨다.
+
+세션이 끝나도 데모로 조용히 떨어지지 않고 로그인 화면으로 간다. 조회 탭이 비로그인으로도 열리기 때문에, 신호(`sessionEnded`)가 없으면 사용자는 로그아웃된 줄 모르고 데모 데이터를 실데이터로 본다.
 
 **페이지네이션은 서버가 적용한 구간(`from`/`to`)을 다음 쪽에 그대로 실어 보낸다.** 조회가 최신순이라 그사이 새 데이터가 쌓이면 offset 이 밀려 행이 겹치거나 건너뛰어진다.
 
 ## 비로그인 동작
 
-보호 라우트가 없다. 데이터 조회 탭은 로그인 없이 열리고, 토큰이 없으면 `api/demo.ts` 의 데모 데이터를 그린다. 판정은 `api/index.ts` 의 `isDemo()`(토큰이 `null` 인지)가 한다.
+데이터 조회 탭은 로그인 없이 열리고, 토큰이 없으면 `api/demo.ts` 의 데모 데이터를 그린다. 판정은 `api/index.ts` 의 `isDemo()`(토큰이 `null` 인지)가 한다.
 
-`/me/*` 와 `/tenant/*` 는 데모 폴백이 없어 비로그인 시 아예 호출하지 않는다.
+`/me/*` 와 `/tenant/*` 는 데모 폴백이 없어 비로그인 시 아예 호출하지 않는다. 보안 기능 화면도 마찬가지라 `RequireAuth` 로 막는다.
 
-`src/components/RequireAuth.tsx` 가 있지만 **어디서도 import 되지 않는다.** 죽은 코드다(`docs/exec-plans/tech-debt.md`).
+## 권한
+
+역할은 `admin` 과 `viewer` 다. viewer 에게는 PLATFORM 묶음 메뉴와 대응·판단 버튼을 숨기기만 한다. 판정은 서버가 하고 viewer 의 요청은 403 이다.
 
 ## 외부 연동
 

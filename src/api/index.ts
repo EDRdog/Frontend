@@ -2,10 +2,14 @@ import { listRequest, queryString, request } from './client'
 import { demoApi } from './demo'
 import { useAuthStore } from '@/store/auth'
 import type {
+  AdminIp,
+  AdminIps,
   Alert,
   AlertStatus,
   AlertSummary,
+  AuditRecord,
   AuthResponse,
+  CreatedUser,
   Correlation,
   DnsLookup,
   EdrEvent,
@@ -18,6 +22,8 @@ import type {
   Lineage,
   RuleCatalogEntry,
   SearchResults,
+  SecurityPolicy,
+  SelfTestRun,
   Topology,
   UserWebhook,
   WebhookTestResult,
@@ -56,6 +62,15 @@ type EventFilter = {
 }
 
 type Period = { from?: number; to?: number }
+
+type AuditFilter = Period & {
+  /** 사건 유형. 서버와 에이전트가 같은 칸을 쓴다. */
+  type?: string
+  /** 유저 이메일 또는 host. */
+  actor?: string
+  result?: 'success' | 'failure'
+  order?: 'asc' | 'desc'
+}
 
 type TopologyFilter = Period & {
   /** 호스트·목적지 부분 일치. */
@@ -264,6 +279,36 @@ export const api = {
    * 토큰이 짧게 살기 때문에(기본 24시간) 화면을 열 때가 아니라 사용자가 누를 때 부른다.
    */
   issueInstallLink: () => request<InstallLink>('/tenant/install-link', { method: 'POST' }),
+
+  // 아래 보안 기능 화면은 로그인한 계정의 조직 설정이라 데모 폴백이 없다. 대부분 admin 전용이고 서버도 403 을 낸다.
+
+  /** 성공하면 204. 규칙 위반, 현재 비밀번호 불일치, 직전 비밀번호 재사용은 400 이다. */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>('/auth/password', { method: 'POST', body: { currentPassword, newPassword } }),
+
+  securityPolicy: () => request<SecurityPolicy>('/auth/security-policy'),
+
+  saveSecurityPolicy: (policy: SecurityPolicy) =>
+    request<SecurityPolicy>('/auth/security-policy', { method: 'PUT', body: policy }),
+
+  adminIps: () => request<AdminIps>('/tenant/admin-ips'),
+
+  addAdminIp: (ip: string) =>
+    request<AdminIp>('/tenant/admin-ips', { method: 'POST', body: { ip } }),
+
+  removeAdminIp: (id: number) => request<void>(`/tenant/admin-ips/${id}`, { method: 'DELETE' }),
+
+  /** 같은 조직에 viewer 계정을 만든다. 역할은 요청으로 못 정하고 서버가 viewer 로 만든다. */
+  createViewer: (email: string, password: string) =>
+    request<CreatedUser>('/tenant/users', { method: 'POST', body: { email, password } }),
+
+  auditPage: (filter: AuditFilter & PageOptions & { limit?: number } = {}) =>
+    listRequest<AuditRecord>(`/audit${queryString(filter)}`),
+
+  /** 서버 자체시험과 무결성 검증 최근 실행을 최신순으로. */
+  selfTests: () => request<SelfTestRun[]>('/operations/selftest?limit=20'),
+
+  runSelfTest: () => request<SelfTestRun>('/operations/selftest', { method: 'POST' }),
 
   myHosts: () => request<MyHosts>('/me/hosts'),
 

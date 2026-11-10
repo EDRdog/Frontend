@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="ko" data-theme="midnight" data-tone="dark" data-role="admin">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EDRdog 보안 기능 관리 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<style>
+  /* 토큰: dashboard.html 의 미드나잇·클라우드 값 그대로. 카드는 소프트(둥근 모서리 + 옅은 그림자) */
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e17; --shell: #0e1320; --panel: #0d121d; --panel-soft: #121a2a; --raised: #151c2b; --hover: #1b2335;
+    --line: #1f2838; --line-strong: #2b3549;
+    --ink: #eef2f8; --ink-2: #c6cedb; --mid: #97a3b6; --faint: #75819a;
+    --accent: #3a72ff; --accent-hi: #5285ff; --accent-ink: #9dbbff; --accent-wash: rgba(58, 114, 255, 0.16);
+    --crit: #f04848; --high: #f7811f; --med: #e5b80b; --low: #5aa2ff; --good: #2fc471;
+    --card-line: color-mix(in srgb, var(--ink) 9%, transparent);
+    --card-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent), 0 10px 30px rgba(0, 0, 0, 0.35);
+    --sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+  :root[data-theme='cloud'] {
+    color-scheme: light;
+    --bg: #eef2f7; --shell: #f7f9fc; --panel: #ffffff; --panel-soft: #ffffff; --raised: #f2f5fa; --hover: #e7ecf4;
+    --line: #dfe5ee; --line-strong: #cbd3df;
+    --ink: #0f1729; --ink-2: #33405a; --mid: #56627a; --faint: #6f7c92;
+    --accent: #2f5fe0; --accent-hi: #2652c8; --accent-ink: #2652c8; --accent-wash: rgba(47, 95, 224, 0.1);
+    --crit: #cc2936; --high: #b24a00; --med: #a87500; --low: #1f5fbf; --good: #1d7a4c;
+    --card-line: transparent;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 13px; line-height: 1.5; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+  .num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  /* 앱 셸: 사이드바 232px + 상단바 */
+  .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; }
+  .side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; background: var(--shell); border-right: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+  .brand img { width: 28px; height: 28px; padding: 2px; border-radius: 50%; background: #fff; }
+  .brand b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .nav { flex: 1; padding: 14px 10px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  .nav h6 { padding: 0 10px 4px; font: 600 10px var(--mono); letter-spacing: 0.14em; color: var(--faint); }
+  .nav a { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 9px; color: var(--ink-2); font-size: 13px; font-weight: 500; text-decoration: none; transition: background-color 140ms, color 140ms; }
+  .nav a svg { width: 16px; height: 16px; stroke: var(--mid); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: stroke 140ms; }
+  .nav a:hover { background: var(--hover); color: var(--ink); }
+  .nav a:hover svg { stroke: var(--accent-ink); }
+  .nav a.on { background: var(--accent); color: #fff; }
+  .nav a.on svg { stroke: #fff; }
+  .nav .count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 3px; background: color-mix(in srgb, var(--crit) 16%, transparent); color: var(--crit); font: 600 11px var(--mono); text-align: center; }
+  .nav a.on .count { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  .side-foot { padding: 12px 14px; border-top: 1px solid var(--line); }
+  .me { display: flex; align-items: center; gap: 10px; }
+  .me .av { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .me .who { min-width: 0; flex: 1; }
+  .me .who b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me .who span { font: 500 10.5px var(--mono); color: var(--faint); letter-spacing: 0.04em; }
+  .me .btn { height: 28px; padding: 0 8px; font-size: 11.5px; }
+  /* viewer 는 대응·설정 메뉴가 없다 */
+  :root[data-role='viewer'] .admin-only { display: none !important; }
+  :root[data-role='admin'] .viewer-only { display: none !important; }
+
+  .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 28px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .crumb { font: 500 11px var(--mono); color: var(--faint); letter-spacing: 0.04em; }
+  .crumb + h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--panel); color: var(--faint); }
+  .search kbd { margin-left: auto; font: 500 10px var(--mono); padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 3px; }
+  .main { padding: 22px 28px 48px; display: flex; flex-direction: column; gap: 16px; max-width: 1480px; }
+
+  /* 버튼: 주(파랑, 알약) · 보조(테두리) · 고스트 */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--raised); font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color 140ms, border-color 140ms, transform 80ms; }
+  .btn:hover { background: var(--hover); border-color: var(--faint); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { border-radius: 980px; background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hi); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--mid); }
+  .btn.ghost:hover { color: var(--ink); background: var(--hover); }
+  .btn.lg { height: 38px; padding: 0 18px; font-size: 13px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .btn.primary:disabled:hover { background: var(--accent); }
+  .btn:not(.primary):disabled:hover { background: var(--raised); border-color: var(--line-strong); }
+  .btn.ghost:disabled:hover { background: transparent; border-color: transparent; color: var(--mid); }
+  .btn:focus-visible, .nav a:focus-visible, .seg button:focus-visible, .chip:focus-visible, .queue li:focus-visible, .sort:focus-visible, .link:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+  .theme { width: 32px; padding: 0; }
+  .theme svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .theme .sun { color: var(--high); }
+  .theme .moon { color: var(--accent); display: none; }
+  :root[data-tone='light'] .theme .sun { display: none; }
+  :root[data-tone='light'] .theme .moon { display: block; }
+  .link { border: 0; background: none; padding: 0; color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+
+  /* 카드: 테두리 대신 옅은 그림자, 14px */
+  .panel, .summary { border-radius: 14px; background: var(--panel-soft); border: 1px solid var(--card-line); box-shadow: var(--card-shadow); }
+  .panel { overflow: hidden; }
+  .panel-h { display: flex; align-items: center; gap: 10px; padding: 18px 20px 4px; }
+  .panel-h h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .panel-h .meta { font: 500 11px var(--mono); color: var(--faint); }
+  .meta.ko, .panel-h .meta.ko, .panel-f .meta.ko { font: 500 12px var(--sans); }
+  .panel-h .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .panel-b { padding: 16px 20px 20px; }
+  .panel-f { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line); }
+  .panel-f .meta { font: 500 11px var(--mono); color: var(--faint); }
+  .panel-f .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  /* 배지(알약, 앞에 점) · 태그(3px) */
+  .sev { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 980px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .sev::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .sev.crit { color: var(--crit); background: color-mix(in srgb, var(--crit) 10%, transparent); }
+  .sev.high { color: var(--high); background: color-mix(in srgb, var(--high) 10%, transparent); }
+  .sev.good { color: var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); }
+  .sev.info { color: var(--low); background: color-mix(in srgb, var(--low) 10%, transparent); }
+  .sev.mute { color: var(--mid); background: var(--raised); }
+  .sev.mono { font-family: var(--mono); letter-spacing: 0.04em; }
+  .tag { display: inline-block; font: 500 11px var(--mono); color: var(--accent-ink); padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--accent-ink) 30%, transparent); border-radius: 3px; white-space: nowrap; }
+  .tag.mute { color: var(--ink-2); border-color: var(--line-strong); }
+
+  /* 페이지 머리 · 세그먼트 */
+  .page-head { display: flex; align-items: flex-end; gap: 16px; }
+  .page-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .page-head p { color: var(--mid); margin-top: 2px; }
+  .page-head .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .seg { display: inline-flex; align-self: flex-start; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: var(--mid); font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color 140ms, color 140ms; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on, .seg button[aria-selected='true'] { background: var(--raised); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .seg.tabs button { height: 32px; padding: 0 16px; font-size: 13px; }
+
+  /* 표 */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 9px 12px; font: 600 10px var(--mono); letter-spacing: 0.1em; color: var(--faint); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th:first-child, td:first-child { padding-left: 20px; }
+  th:last-child, td:last-child { padding-right: 20px; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { transition: background-color 120ms; }
+  tbody tr:hover { background: var(--raised); }
+  td.m { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  td.d { font-family: var(--mono); font-size: 12px; color: var(--mid); white-space: nowrap; }
+  td.t b { display: block; font-weight: 600; font-size: 13px; }
+  td.t code { display: block; font: 400 11px var(--mono); color: var(--faint); }
+  .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 폼: 라벨 위, 도움말·오류 아래 */
+  .fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; }
+  .fgrid .full { grid-column: 1 / -1; }
+  .fld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .lab { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .inp { width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--panel); color: var(--ink); font-size: 13px; outline: none; transition: border-color 140ms, box-shadow 140ms; }
+  .inp::placeholder { color: var(--faint); }
+  .inp:hover { border-color: var(--faint); }
+  .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+  .inp[type='password'] { font-family: var(--mono); letter-spacing: 0.12em; }
+  .inp.mono { font-family: var(--mono); }
+  .inp[aria-invalid='true'] { border-color: var(--crit); }
+  .inp[aria-invalid='true']:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--crit) 18%, transparent); }
+  select.inp { appearance: none; padding-right: 32px; cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--mid) 50%), linear-gradient(135deg, var(--mid) 50%, transparent 50%); background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px; background-size: 5px 5px; background-repeat: no-repeat; }
+  .msg { min-height: 18px; font-size: 12px; color: var(--mid); }
+  .msg.bad { color: var(--crit); }
+  .msg.ok { color: var(--good); }
+  .help { font-size: 12px; color: var(--mid); line-height: 1.55; }
+  .help code, .note code { font: 500 11.5px var(--mono); color: var(--ink-2); }
+
+  /* 비밀번호 규칙: 점 하나가 상태(지킴·어김·저장 때 확인) */
+  .rules { list-style: none; padding: 0; display: grid; gap: 10px; }
+  .rules li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); }
+  .rules li i { width: 8px; height: 8px; border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+  .rules li.ok i { background: var(--good); box-shadow: none; }
+  .rules li.bad { color: var(--ink); }
+  .rules li.bad i { background: var(--crit); box-shadow: none; }
+  .rules li small { font-size: 11.5px; color: var(--faint); }
+  .rules li small.mono { font-size: 11px; }
+  .rules li.bad small { color: var(--crit); }
+  .rules li.later { color: var(--mid); }
+  .rules.two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 20px; }
+  .rules.two li { font-size: 12.5px; }
+
+  /* 설정 */
+  .set-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; max-width: 1060px; }
+  .stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .tabpanel { display: none; }
+  .tabpanel.on { display: block; }
+  .form-foot { display: flex; align-items: center; gap: 12px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .form-foot .btn.primary { margin-left: auto; }
+  .note { padding: 12px 14px; border-radius: 9px; background: var(--raised); color: var(--mid); font-size: 12.5px; line-height: 1.6; }
+  .note b { color: var(--ink-2); font-weight: 600; }
+  .note.warn { border-left: 2px solid var(--high); }
+  .note.good { border-left: 2px solid var(--good); }
+  .note > strong { display: block; margin-bottom: 2px; color: var(--ink); font-weight: 600; font-size: 13px; }
+  .side-list { list-style: none; padding: 0; display: grid; gap: 12px; }
+  .side-list li { display: grid; gap: 2px; padding-left: 12px; border-left: 2px solid var(--line-strong); }
+  .side-list li b { font-size: 13px; font-weight: 600; }
+  .side-list li span { font-size: 12.5px; color: var(--mid); line-height: 1.55; }
+  .sub-h { font-size: 11.5px; font-weight: 600; color: var(--faint); margin-bottom: 8px; }
+  .srow { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 20px; align-items: start; padding: 16px 0; border-top: 1px solid var(--line); }
+  .srow:first-child { border-top: 0; padding-top: 4px; }
+  .srow b { display: block; font-size: 13.5px; font-weight: 600; }
+  .srow p { margin-top: 3px; font-size: 12.5px; color: var(--mid); }
+  .unit { display: flex; align-items: center; gap: 8px; }
+  .unit .inp { text-align: right; font-family: var(--mono); }
+  .unit span { flex: none; width: 18px; color: var(--mid); }
+  .unit + .msg { margin-top: 6px; }
+  .applied { display: grid; gap: 14px; }
+  .applied p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+  .applied b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+
+  /* 관리 IP */
+  .ip-me { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; padding: 18px 20px; }
+  .ip-me small { display: block; font-size: 11.5px; font-weight: 600; color: var(--faint); }
+  .ip-me .big { display: block; margin-top: 4px; font: 600 24px/1.1 var(--mono); letter-spacing: -0.02em; }
+  .ip-me .state { padding-left: 28px; border-left: 1px solid var(--line); }
+  .ip-me .state b { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+  .ip-me .state p { margin-top: 3px; font-size: 12.5px; color: var(--mid); }
+  .st { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .st::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .st.good { color: var(--good); }
+  .st.none { color: var(--faint); }
+  .add-row { display: flex; gap: 8px; }
+  .add-row .inp { flex: 1; }
+  .ip-table td.ip { font: 600 13px var(--mono); }
+  .ip-table td .tag { margin-left: 8px; }
+  .ip-table td:last-child { text-align: right; }
+  .ip-empty { display: none; padding: 22px 20px 24px; border-top: 1px solid var(--line); }
+  .ip-empty b { display: block; font-size: 14px; font-weight: 700; }
+  .ip-empty p { margin: 4px 0 16px; color: var(--mid); font-size: 12.5px; }
+  #t-ip.empty .ip-list, #t-ip.empty .ip-foot { display: none; }
+  #t-ip.empty .ip-empty { display: block; }
+
+  /* 감사기록 */
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 16px 20px; }
+  .fgroup { display: flex; flex-direction: column; gap: 6px; }
+  .fgroup > span { font-size: 11.5px; font-weight: 600; color: var(--mid); }
+  .fgroup .inp { height: 34px; }
+  .fgroup .seg { padding: 2px; }
+  .fgroup .seg button { height: 28px; }
+  .filters .btn.ghost { margin-left: auto; height: 34px; }
+  .audit { table-layout: fixed; }
+  .audit td { padding-top: 9px; padding-bottom: 9px; }
+  .audit td.who { font-size: 12.5px; color: var(--ink); }
+  .audit td.who.host { font: 600 12px var(--mono); }
+  .audit td.tgt { font: 400 12px var(--mono); color: var(--ink-2); }
+  .audit td.det { font-size: 12.5px; color: var(--mid); }
+  .audit .fail { color: var(--crit); font-weight: 600; }
+  .audit .ok { color: var(--mid); }
+  .res { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; }
+  .res.fail::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--crit); }
+  .sort { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; color: var(--ink-2); }
+  .sort::after { content: ''; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; }
+  th[aria-sort='ascending'] .sort::after { border-top: 0; border-bottom: 5px solid currentColor; }
+  .pager { display: flex; align-items: center; gap: 4px; }
+  .pager .pg { min-width: 32px; height: 32px; padding: 0 8px; border: 0; border-radius: 9px; background: transparent; color: var(--mid); font: 500 12px var(--mono); }
+  .pager .pg:hover { background: var(--hover); color: var(--ink); }
+  .pager .pg.on { background: var(--accent); color: #fff; }
+  .pager .gap { color: var(--faint); padding: 0 4px; font-family: var(--mono); }
+
+  /* 자체점검: 고른 실행을 크게, 오른쪽에 최근 실행 */
+  .focus { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+  .focus-main { padding: 24px 0 0; }
+  .focus-main > .fm-h { padding: 0 26px; }
+  .focus-top { display: flex; align-items: center; gap: 8px; }
+  .focus-time { margin-left: auto; font: 500 12px var(--mono); color: var(--mid); }
+  .focus-main h2 { margin-top: 14px; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; }
+  .focus-host { margin-top: 4px; color: var(--mid); }
+  .focus-host b { font-family: var(--mono); font-weight: 500; color: var(--ink-2); }
+  .focus-side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 84px; }
+  .queue { list-style: none; padding: 6px; margin: 0; }
+  .queue li { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; transition: background-color 140ms; }
+  .queue li:hover { background: var(--raised); }
+  .queue li.on { background: var(--accent-wash); }
+  .queue li > i { flex: none; align-self: stretch; width: 3px; border-radius: 2px; }
+  .queue li > div { min-width: 0; flex: 1; }
+  .queue b { display: block; font: 600 12.5px var(--mono); }
+  .queue span { display: block; font-size: 11.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .q-h { padding: 12px 16px 2px; font: 600 10px var(--mono); letter-spacing: 0.1em; color: var(--faint); }
+  .items { margin-top: 18px; border-top: 1px solid var(--line); }
+  .items td.nm { font: 600 12.5px var(--mono); }
+  .items td.det { font-size: 12.5px; color: var(--mid); }
+  .items td.det code { font: 400 11.5px var(--mono); color: var(--ink-2); overflow-wrap: anywhere; }
+  .items tr.fail td { background: color-mix(in srgb, var(--crit) 6%, transparent); }
+  .items tr.fail td:first-child { box-shadow: inset 2px 0 0 var(--crit); }
+  .advice { display: flex; align-items: center; gap: 12px; margin: 0 26px 24px; padding: 12px 14px; border-radius: 10px; background: var(--raised); border-left: 2px solid var(--accent); }
+  .advice p { font-size: 13px; }
+  .advice p b { font-family: var(--mono); font-weight: 600; }
+  .advice small { display: block; color: var(--faint); font: 500 10px var(--mono); letter-spacing: 0.1em; margin-bottom: 2px; }
+  .advice .acts { margin-left: auto; display: flex; gap: 6px; }
+  .advice .ro { margin-left: auto; font-size: 12px; color: var(--mid); white-space: nowrap; }
+  .hint-box { padding: 12px 16px; border: 1px dashed var(--line-strong); border-radius: 9px; color: var(--mid); font-size: 12.5px; }
+  .hint-box .link { margin-left: 4px; }
+
+  /* viewer 장면: 위협 상세(대시보드 포커스형) */
+  .why { margin-top: 16px; display: grid; gap: 6px; }
+  .why small { font: 600 10px var(--mono); letter-spacing: 0.1em; color: var(--faint); }
+  .why ul { padding-left: 18px; }
+  .why li { font-size: 13px; color: var(--ink-2); }
+  .tl { list-style: none; padding: 0; margin: 22px 0 8px; }
+  .tl li { position: relative; display: flex; gap: 16px; padding-bottom: 16px; }
+  .tl li::before { content: ''; position: absolute; left: 15px; top: 32px; bottom: 0; width: 2px; background: var(--line-strong); }
+  .tl li:last-child::before { display: none; }
+  .tl .n { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--panel-soft); border: 1px solid var(--line-strong); font: 600 11px var(--mono); color: var(--ink-2); }
+  .tl small { display: block; font-size: 11px; color: var(--faint); }
+  .tl b { font: 600 14px var(--mono); }
+  .tl p { font-size: 12.5px; color: var(--mid); }
+  .tl li.warn .n { background: color-mix(in srgb, var(--high) 18%, transparent); border-color: var(--high); color: var(--high); }
+  .tl li.warn b { color: var(--high); }
+  .tl li.hit .n { background: var(--crit); border-color: var(--crit); color: #fff; }
+  .tl li.hit b { color: var(--crit); }
+  .threat-main { padding: 24px 26px 4px; }
+  .threat-main .advice { margin: 12px 0 22px; }
+  .queue.mono b { font-family: var(--sans); font-size: 13px; }
+
+  /* 로그인 · 강제 변경: 셸 밖 단독 화면 */
+  .solo { display: none; min-height: 100dvh; background: var(--bg); }
+  body[data-screen='login'] .app, body[data-screen='force'] .app { display: none; }
+  body[data-screen='login'] #s-login { display: grid; place-items: center; padding: 40px 20px; }
+  body[data-screen='force'] #s-force { display: flex; flex-direction: column; }
+  .auth-card { width: min(400px, 100%); padding: 30px 28px 28px; border-radius: 14px; background: var(--panel-soft); border: 1px solid var(--card-line); box-shadow: var(--card-shadow); animation: fade 420ms ease-out both; }
+  .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .auth-brand img { width: 28px; height: 28px; padding: 2px; border-radius: 50%; background: #fff; }
+  .auth-brand b { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .auth-card .seg { display: flex; margin-bottom: 20px; }
+  .auth-card .seg button { flex: 1; height: 32px; }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-form .inp { height: 40px; }
+  .auth-err { display: flex; gap: 10px; padding: 10px 12px; border-radius: 9px; background: color-mix(in srgb, var(--crit) 10%, transparent); color: var(--ink); font-size: 12.5px; }
+  .auth-err::before { content: ''; flex: none; width: 2px; border-radius: 2px; background: var(--crit); }
+  .auth-form .btn.primary { height: 40px; font-size: 13.5px; margin-top: 4px; }
+  .lock-note { display: flex; align-items: center; gap: 8px; margin-top: -4px; font-size: 12px; color: var(--mid); }
+  .lock-note::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--med); }
+  .force-top { display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 28px; border-bottom: 1px solid var(--line); background: var(--shell); }
+  .force-top .auth-brand { margin: 0; }
+  .force-top .who { margin-left: auto; font-size: 12.5px; color: var(--mid); }
+  .force-top .who b { color: var(--ink); font-weight: 600; }
+  .force-body { flex: 1; display: grid; place-items: start center; padding: 56px 20px 40px; }
+  .force-card { width: min(620px, 100%); padding: 32px 32px 28px; }
+  .force-card .step { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--high); }
+  .force-card h2 { margin-top: 10px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .force-card > p { margin-top: 6px; color: var(--mid); font-size: 13.5px; max-width: 52ch; }
+  .force-card .fgrid { margin-top: 24px; }
+  .force-card .rules-box { padding: 14px 16px; border-radius: 10px; background: var(--raised); }
+
+  .view { display: none; }
+  .view.on { display: flex; }
+  .main > * { animation: fade 420ms ease-out both; }
+  .main > *:nth-child(2) { animation-delay: 50ms; }
+  .main > *:nth-child(3) { animation-delay: 100ms; }
+  .main > *:nth-child(4) { animation-delay: 150ms; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  .shot * { animation: none !important; }
+
+  @media (max-width: 1100px) {
+    .set-grid, .focus { grid-template-columns: minmax(0, 1fr); }
+    .focus-side { position: static; }
+  }
+
+  /* 시안 화면 고르기(시안 전용) */
+  .picker { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: 300px; padding: 12px; border-radius: 9px; background: #111113; color: #f4f4f5; border: 1px solid #34343c; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); font-size: 12px; }
+  .picker header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font: 600 10px var(--mono); letter-spacing: 0.12em; color: #8e8e98; }
+  .picker header button { border: 0; background: none; color: #8e8e98; font: 500 11px var(--mono); }
+  .picker .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 6px; background: #1e1e23; }
+  .picker .opts a { display: grid; place-items: center; height: 30px; padding: 0 6px; border-radius: 4px; color: #a6a6b0; font-size: 11.5px; font-weight: 600; text-decoration: none; text-align: center; }
+  .picker .opts a:hover { color: #f4f4f5; }
+  .picker .opts a.on { background: #2b63f0; color: #fff; }
+  .picker .opts a:focus-visible, .picker header button:focus-visible { outline: 2px solid #8db0ff; outline-offset: 1px; }
+  .picker.min .opts { display: none; }
+  .picker.min { width: auto; }
+  .picker.min header { margin: 0; gap: 12px; }
+  .shot .picker { display: none; }
+</style>
+</head>
+<body data-screen="app">
+
+<!-- ===== 앱 셸 ===== -->
+<div class="app">
+  <aside class="side">
+    <div class="brand"><img src="../../../public/logo.png" alt="EDRdog 로고" /><b>EDRdog</b></div>
+    <nav class="nav" aria-label="주 메뉴">
+      <div>
+        <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>대시보드</a>
+      </div>
+      <div>
+        <h6>TRIAGE</h6>
+        <a href="#viewer" data-nav="threats"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>위협<span class="count">5</span></a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/></svg>사건</a>
+      </div>
+      <div>
+        <h6>EVIDENCE</h6>
+        <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></svg>엔드포인트</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>수집 로그</a>
+      </div>
+      <div>
+        <h6>ANALYSIS</h6>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"/></svg>위협 지도</a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 8 11 16M16.5 8 13 16"/></svg>관계 분석</a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>IP·도메인 조회</a>
+      </div>
+      <!-- viewer 는 이 묶음을 통째로 보지 않는다(연동·감사기록·자체점검·설정 모두 admin 전용) -->
+      <div class="admin-only">
+        <h6>PLATFORM</h6>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>수집 알림 연동</a>
+        <a href="#audit" data-nav="audit"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>감사기록</a>
+        <a href="#selftest" data-nav="selftest"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7-7 8-4-1-7-3.5-7-8V6z"/><path d="M9 12l2 2 4-4"/></svg>자체점검</a>
+        <a href="#settings-password" data-nav="settings"><svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.5"/><path d="M11.8 11.8L20 20"/><path d="M17 17l2.2-2.2"/></svg>설정</a>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="me">
+        <span class="av" id="meAv">A</span>
+        <div class="who"><b id="meEmail" title="admin@hanmaru.co.kr">admin@hanmaru.co.kr</b><span id="meRole">ADMIN</span></div>
+        <button class="btn ghost" type="button">로그아웃</button>
+      </div>
+    </div>
+  </aside>
+
+  <div>
+    <header class="top">
+      <div>
+        <div class="crumb" id="crumb">EDRDOG / PLATFORM / SETTINGS</div>
+        <h1 id="title">설정</h1>
+      </div>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>호스트·위협·로그 검색<kbd>/</kbd></div>
+      <button class="btn" type="button">자동 새로고침 끔</button>
+      <button class="btn theme" id="theme" type="button" aria-label="라이트 모드로 전환" title="라이트 모드로 전환">
+        <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+      </button>
+    </header>
+
+    <!-- ===== 1. 설정 ===== -->
+    <main class="main view" id="v-settings" style="flex-direction:column">
+      <div class="page-head">
+        <div><h2>설정</h2><p>내 비밀번호와 조직의 접속 보안을 관리합니다.</p></div>
+      </div>
+      <div class="seg tabs" role="tablist" aria-label="설정 항목">
+        <button role="tab" id="tab-password" aria-controls="t-password" data-tab="password">비밀번호 변경</button>
+        <button role="tab" id="tab-policy" aria-controls="t-policy" data-tab="policy">보안정책</button>
+        <button role="tab" id="tab-ip" aria-controls="t-ip" data-tab="ip">관리 IP</button>
+        <button role="tab" id="tab-accounts" aria-controls="t-accounts" data-tab="accounts">계정</button>
+      </div>
+
+      <div>
+        <!-- 비밀번호 변경 -->
+        <section class="tabpanel" id="t-password" role="tabpanel" aria-labelledby="tab-password">
+          <div class="set-grid pwbox" data-email="admin@hanmaru.co.kr">
+            <article class="panel">
+              <div class="panel-h"><h2>비밀번호 변경</h2><span class="meta ko">마지막 변경 2026-09-14</span></div>
+              <form class="panel-b" onsubmit="return false" novalidate>
+                <div class="fgrid">
+                  <label class="fld"><span class="lab">현재 비밀번호</span><input class="inp" type="password" autocomplete="current-password" value="Hm!2609soc" /></label>
+                  <div></div>
+                  <label class="fld"><span class="lab">새 비밀번호</span><input class="inp" type="password" autocomplete="new-password" data-pw="new" value="Qwer1234!x" aria-describedby="pwRulesTitle" /></label>
+                  <label class="fld"><span class="lab">새 비밀번호 확인</span><input class="inp" type="password" autocomplete="new-password" data-pw="confirm" value="Qwer1234!x" /><span class="msg" data-pw="match" aria-live="polite"></span></label>
+                </div>
+                <div class="form-foot">
+                  <span class="msg" data-pw="summary" aria-live="polite"></span>
+                  <button class="btn primary lg" type="submit" data-pw="submit">비밀번호 바꾸기</button>
+                </div>
+              </form>
+            </article>
+            <aside class="panel">
+              <div class="panel-h"><h2 id="pwRulesTitle">비밀번호 규칙</h2></div>
+              <div class="panel-b"><ul class="rules" data-pw="rules"></ul></div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- 보안정책 -->
+        <section class="tabpanel" id="t-policy" role="tabpanel" aria-labelledby="tab-policy">
+          <div class="set-grid">
+            <article class="panel">
+              <div class="panel-h"><h2>로그인 보안정책</h2><span class="meta ko">조직의 모든 계정에 적용</span></div>
+              <form class="panel-b" id="policyForm" onsubmit="return false" novalidate>
+                <div class="srow">
+                  <div><b><label for="polFails">연속 실패 허용 횟수</label></b><p>이 횟수만큼 연속으로 틀리면 그 계정을 잠급니다.</p></div>
+                  <div><div class="unit"><input class="inp" id="polFails" type="number" inputmode="numeric" min="1" max="5" value="5" data-pol="fails" /><span>회</span></div><div class="msg" data-hint="1~5회 사이">1~5회 사이</div></div>
+                </div>
+                <div class="srow">
+                  <div><b><label for="polLock">잠금 시간</label></b><p>잠긴 계정은 이 시간이 지나야 다시 로그인할 수 있습니다.</p></div>
+                  <div><div class="unit"><input class="inp" id="polLock" type="number" inputmode="numeric" min="5" value="30" data-pol="lock" /><span>분</span></div><div class="msg" data-hint="5분 이상">5분 이상</div></div>
+                </div>
+                <div class="srow">
+                  <div><b><label for="polIdle">유휴 세션 종료</label></b><p>아무 조작이 없으면 이 시간 뒤에 로그아웃합니다.</p></div>
+                  <div><div class="unit"><input class="inp" id="polIdle" type="number" inputmode="numeric" min="1" max="60" value="15" data-pol="idle" /><span>분</span></div><div class="msg" data-hint="1~60분 사이">1~60분 사이</div></div>
+                </div>
+                <div class="form-foot">
+                  <span class="meta ko" style="color:var(--faint)">마지막 변경 11-10 14:22, admin@hanmaru.co.kr</span>
+                  <button class="btn ghost" type="button" id="policyReset" style="margin-left:auto">되돌리기</button>
+                  <button class="btn primary lg" type="submit" id="policySave" style="margin-left:0">저장</button>
+                </div>
+              </form>
+            </article>
+            <aside class="panel">
+              <div class="panel-h"><h2>적용 내용</h2></div>
+              <div class="panel-b applied" id="policyApplied"></div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- 관리 IP -->
+        <section class="tabpanel" id="t-ip" role="tabpanel" aria-labelledby="tab-ip">
+          <div class="set-grid">
+            <div class="stack">
+              <article class="panel ip-me">
+                <div><small>지금 내 IP</small><span class="big" id="myIp">203.0.113.24</span></div>
+                <div class="state" id="ipState"></div>
+              </article>
+              <article class="panel">
+                <div class="panel-h"><h2>허용 IP 목록</h2><span class="meta" id="ipCount"></span></div>
+                <div class="panel-b" style="padding-bottom:16px">
+                  <form class="fld" id="ipForm" onsubmit="return false" novalidate>
+                    <label class="lab" for="ipInput">IP 추가</label>
+                    <div class="add-row">
+                      <input class="inp mono" id="ipInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="예: 198.51.100.17" value="198.51.100.0/24" aria-describedby="ipMsg ipHelp" />
+                      <button class="btn primary lg" type="submit" id="ipAdd">추가</button>
+                    </div>
+                    <span class="msg" id="ipMsg" aria-live="polite"></span>
+                    <span class="help" id="ipHelp">IP 를 하나씩 등록합니다. 범위(<code>198.51.100.0/24</code>, <code>10.0.0.1-10.0.0.20</code>)와 와일드카드(<code>*</code>)는 받지 않습니다.</span>
+                  </form>
+                </div>
+                <table class="ip-table ip-list">
+                  <colgroup><col /><col style="width:200px" /><col style="width:120px" /><col style="width:90px" /></colgroup>
+                  <thead><tr><th>IP 주소</th><th>등록한 사람</th><th>등록 시각</th><th></th></tr></thead>
+                  <tbody id="ipRows"></tbody>
+                </table>
+                <div class="panel-f ip-foot"><span class="help">내 IP 는 다른 IP 가 목록에 남아 있는 동안 뺄 수 없습니다. 스스로 접속이 막히는 것을 막기 위해서입니다.</span></div>
+                <div class="ip-empty">
+                  <b>등록된 IP 가 없어 접속 IP 를 제한하지 않습니다</b>
+                  <p>어느 IP 에서든 로그인할 수 있습니다. 처음 등록하는 IP 는 지금 내 IP 여야 합니다.</p>
+                  <button class="btn primary lg" type="button" id="ipStart">내 IP 로 제한 시작</button>
+                </div>
+              </article>
+            </div>
+            <aside class="panel">
+              <div class="panel-h"><h2>목록이 하는 일</h2></div>
+              <div class="panel-b">
+                <ul class="side-list">
+                  <li><b>비어 있으면 제한 없음</b><span>어느 IP 에서든 로그인하고 관리 화면을 쓸 수 있습니다.</span></li>
+                  <li><b>하나라도 있으면 목록 안에서만</b><span>목록 밖 IP 의 로그인과 관리 요청은 거부되고 감사기록에 <code class="mono" style="font-size:11.5px;color:var(--ink-2)">admin_ip_block</code> 으로 남습니다.</span></li>
+                  <li><b>에이전트는 대상이 아님</b><span>에이전트와 서버 사이 통신은 이 목록과 상관없이 계속됩니다.</span></li>
+                </ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- 계정 -->
+        <section class="tabpanel" id="t-accounts" role="tabpanel" aria-labelledby="tab-accounts">
+          <div class="set-grid pwbox" data-email-from="#acEmail">
+            <article class="panel">
+              <div class="panel-h"><h2>조회 계정 만들기</h2><span class="meta ko">같은 조직, 역할 viewer</span></div>
+              <form class="panel-b" id="acForm" onsubmit="return false" novalidate>
+                <div class="fgrid">
+                  <label class="fld"><span class="lab">이메일</span><input class="inp" id="acEmail" type="email" autocomplete="off" value="jiwoo.park@hanmaru.co.kr" /><span class="msg" id="acEmailMsg"></span></label>
+                  <label class="fld"><span class="lab">초기 비밀번호</span><input class="inp" type="password" autocomplete="new-password" data-pw="new" value="Hmr#Jiwoo-26" /><span class="msg" data-pw="first" aria-live="polite"></span></label>
+                </div>
+                <p class="help" style="margin-top:6px">초기 비밀번호도 비밀번호 규칙을 따릅니다. 만든 뒤에는 다시 보여주지 않으니 본인에게 따로 전달하세요.</p>
+                <div class="note good" id="acDone" hidden style="margin-top:16px"><strong>계정을 만들었습니다</strong><span id="acDoneText"></span></div>
+                <div class="form-foot">
+                  <button class="btn primary lg" type="submit" data-pw="submit">계정 만들기</button>
+                </div>
+              </form>
+            </article>
+            <aside class="panel">
+              <div class="panel-h"><h2>viewer 가 할 수 있는 것</h2></div>
+              <div class="panel-b">
+                <div class="sub-h">볼 수 있음</div>
+                <ul class="side-list">
+                  <li><span>대시보드, 위협, 사건, 엔드포인트, 수집 로그, 분석 화면</span></li>
+                </ul>
+                <div class="sub-h" style="margin-top:18px">할 수 없음</div>
+                <ul class="side-list">
+                  <li><span>프로세스 종료 같은 대응</span></li>
+                  <li><span>위협·사건 판단(확정, 오탐)</span></li>
+                  <li><span>연동·보안정책·관리 IP 설정, 계정 만들기</span></li>
+                  <li><span>감사기록과 자체점검 보기</span></li>
+                </ul>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ===== 2. 감사기록 ===== -->
+    <main class="main view" id="v-audit" style="flex-direction:column">
+      <div class="page-head">
+        <div><h2>감사기록</h2><p>관리 서버와 에이전트가 남긴 기록입니다. 기록은 고치거나 지울 수 없습니다.</p></div>
+      </div>
+      <section class="panel">
+        <form class="filters" onsubmit="return false">
+          <div class="fgroup"><span>기간</span>
+            <div class="seg" id="auditRange"><button type="button">1시간</button><button type="button">24시간</button><button type="button" class="on">7일</button><button type="button">30일</button><button type="button">직접 지정</button></div>
+          </div>
+          <label class="fgroup"><span>사건 유형</span>
+            <select class="inp" style="width:200px">
+              <option>전체 유형</option>
+              <optgroup label="인증"><option>login_success</option><option>login_failure</option><option>logout</option><option>auth_lockout</option><option>password_change</option><option>session_terminate</option></optgroup>
+              <optgroup label="접근통제"><option>admin_ip_block</option><option>admin_ip_change</option><option>access_denied</option><option>account_create</option><option>security_policy_change</option></optgroup>
+              <optgroup label="대응"><option>kill_request</option><option>command_result</option></optgroup>
+              <optgroup label="점검"><option>self_test_result</option><option>integrity_check_result</option><option>security_check</option><option>integrity_check</option></optgroup>
+              <optgroup label="에이전트"><option>agent_enroll</option><option>agent_start</option><option>agent_stop</option></optgroup>
+            </select>
+          </label>
+          <label class="fgroup"><span>행위자</span><input class="inp" style="width:220px" type="search" placeholder="이메일 또는 호스트" /></label>
+          <div class="fgroup"><span>결과</span>
+            <div class="seg" id="auditResult"><button type="button" class="on" data-r="">전체</button><button type="button" data-r="ok">성공</button><button type="button" data-r="fail">실패</button></div>
+          </div>
+          <button class="btn ghost" type="reset">필터 초기화</button>
+        </form>
+      </section>
+      <article class="panel">
+        <div class="panel-h" style="padding-bottom:10px">
+          <h2>기록</h2><span class="meta">1,284건 · 11-04 05:42 ~ 11-11 05:42</span>
+          <div class="right"><span class="meta">1-20</span><button class="btn" type="button" disabled>이전</button><button class="btn" type="button">다음</button></div>
+        </div>
+        <table class="audit">
+          <colgroup><col style="width:144px" /><col style="width:84px" /><col style="width:196px" /><col style="width:178px" /><col style="width:164px" /><col style="width:72px" /><col style="width:124px" /><col /></colgroup>
+          <thead><tr>
+            <th aria-sort="descending"><button class="sort" type="button" id="auditSort" aria-label="시각 정렬, 지금 최신순">시각</button></th>
+            <th>종류</th><th>행위자</th><th>사건 유형</th><th>대상</th><th>결과</th><th>IP</th><th>상세</th>
+          </tr></thead>
+          <tbody id="auditRows"></tbody>
+        </table>
+        <div class="panel-f">
+          <span class="meta">20개씩 · 1 / 65쪽</span>
+          <div class="right pager" aria-label="페이지">
+            <button class="pg" type="button" disabled aria-label="이전 쪽" style="opacity:.45">이전</button>
+            <button class="pg on" type="button" aria-current="page">1</button><button class="pg" type="button">2</button><button class="pg" type="button">3</button><span class="gap">...</span><button class="pg" type="button">65</button>
+            <button class="pg" type="button" aria-label="다음 쪽">다음</button>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <!-- ===== 3. 자체점검 ===== -->
+    <main class="main view" id="v-selftest" style="flex-direction:column">
+      <div class="page-head">
+        <div><h2>자체점검</h2><p>관리 서버가 스스로를 시험하고, 실행 파일과 설정 파일이 기준값과 같은지 확인합니다.</p></div>
+        <div class="right"><button class="btn primary lg" type="button" id="runNow">지금 실행</button></div>
+      </div>
+      <section class="focus">
+        <article class="panel focus-main" id="runDetail"></article>
+        <aside class="focus-side">
+          <article class="panel">
+            <div class="panel-h"><h2>최근 실행</h2><span class="meta" id="runCount"></span></div>
+            <ul class="queue" id="runList"></ul>
+          </article>
+          <div class="hint-box">에이전트의 자체시험과 무결성 결과는 감사기록에서 종류 agent 로 봅니다.<a class="link" href="#audit">감사기록 보기</a></div>
+        </aside>
+      </section>
+    </main>
+
+    <!-- ===== 6. viewer 장면: 위협 상세에서 대응·판단 버튼이 없다 ===== -->
+    <main class="main view" id="v-viewer" style="flex-direction:column">
+      <div class="page-head">
+        <div><h2>위협</h2><p>탐지된 위협을 심각도와 상태로 봅니다.</p></div>
+      </div>
+      <section class="focus">
+        <article class="panel threat-main">
+          <div class="focus-top"><span class="sev crit">심각</span><span class="sev info">미판단</span><span class="tag">T1486</span><span class="focus-time">11-11 02:54:18</span></div>
+          <h2 style="margin-top:14px;font-size:26px;font-weight:700;letter-spacing:-0.03em">문서 대량 암호화 시도</h2>
+          <p class="focus-host"><b>WIN-FIN-02</b> · ransomware_mass_encrypt</p>
+          <div class="why"><small>판정 근거</small><ul><li>확장자 .locked 로 변경된 파일 214개</li><li>섀도 복사본 삭제 명령</li></ul></div>
+          <ol class="tl">
+            <li><span class="n">01</span><div><small>프로세스</small><b>outlook.exe</b><p>메일 첨부 파일을 열었습니다</p></div></li>
+            <li><span class="n">02</span><div><small>프로세스</small><b>excel.exe</b><p>매크로가 실행됐습니다</p></div></li>
+            <li class="warn"><span class="n">03</span><div><small>프로세스</small><b>powershell.exe</b><p>인코딩된 명령을 실행했습니다</p></div></li>
+            <li class="hit"><span class="n">04</span><div><small>파일</small><b>문서 214개 암호화</b><p>지금도 진행 중입니다</p></div></li>
+          </ol>
+          <div class="advice">
+            <div><small>RECOMMENDED</small><p><b>WIN-FIN-02</b> 에서 해당 프로세스를 종료하세요.</p></div>
+            <div class="acts admin-only"><button class="btn" type="button">오탐</button><button class="btn" type="button">위협 확정</button><button class="btn primary" type="button">프로세스 종료</button></div>
+            <span class="ro viewer-only">조회 전용 계정입니다. 대응과 판단은 admin 이 합니다.</span>
+          </div>
+        </article>
+        <aside class="focus-side">
+          <article class="panel">
+            <div class="panel-h"><h2>위협 목록</h2><span class="meta">9건</span></div>
+            <div class="q-h">미판단 5</div>
+            <ul class="queue mono">
+              <li class="on"><i style="background:var(--crit)"></i><div><b>문서 대량 암호화 시도</b><span>WIN-FIN-02 · 02:54</span></div></li>
+              <li><i style="background:var(--crit)"></i><div><b>LSASS 메모리 접근</b><span>WIN-DEV-01 · 02:18</span></div></li>
+              <li><i style="background:var(--high)"></i><div><b>인코딩된 PowerShell 명령 실행</b><span>WIN-HR-03 · 01:06</span></div></li>
+              <li><i style="background:var(--high)"></i><div><b>외부 C2 서버 반복 연결</b><span>WIN-FIN-02 · 00:06</span></div></li>
+              <li><i style="background:var(--high)"></i><div><b>로컬 관리자 계정 생성</b><span>WIN-OPS-01 · 어제 18:06</span></div></li>
+            </ul>
+          </article>
+        </aside>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ===== 4. 로그인(실패 직후) ===== -->
+<div class="solo" id="s-login">
+  <div class="auth-card">
+    <div class="auth-brand"><img src="../../../public/logo.png" alt="" /><b>EDRdog</b></div>
+    <div class="seg" role="tablist" aria-label="로그인 또는 회원가입"><button type="button" role="tab" aria-selected="true">로그인</button><button type="button" role="tab" aria-selected="false">회원가입</button></div>
+    <form class="auth-form" onsubmit="return false" novalidate>
+      <label class="fld"><span class="lab">이메일</span><input class="inp" type="email" autocomplete="email" value="jiwoo.park@hanmaru.co.kr" /></label>
+      <label class="fld"><span class="lab">비밀번호</span><input class="inp" type="password" autocomplete="current-password" value="Hmr#viewer2" /></label>
+      <p class="lock-note">연속으로 틀리면 계정이 일시 잠깁니다.</p>
+      <div class="auth-err" role="alert"><span>로그인하지 못했습니다. 이메일과 비밀번호를 확인하세요.</span></div>
+      <button class="btn primary" type="submit">로그인</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== 5. 기본 비밀번호 강제 변경: 셸 없이 이 화면만 ===== -->
+<div class="solo" id="s-force">
+  <header class="force-top">
+    <div class="auth-brand"><img src="../../../public/logo.png" alt="" /><b>EDRdog</b></div>
+    <span class="who"><b>admin@hanmaru.co.kr</b> 로 로그인함</span>
+    <button class="btn ghost" type="button">로그아웃</button>
+  </header>
+  <div class="force-body">
+    <article class="auth-card force-card pwbox" data-email="admin@hanmaru.co.kr">
+      <span class="step">기본 비밀번호 변경 필요</span>
+      <h2>비밀번호를 바꿔야 계속할 수 있습니다</h2>
+      <p>처음 받은 기본 비밀번호로 로그인했습니다. 새 비밀번호를 정하기 전에는 다른 화면으로 이동할 수 없습니다.</p>
+      <form onsubmit="return false" novalidate>
+        <div class="fgrid">
+          <label class="fld full"><span class="lab">기본 비밀번호</span><input class="inp" type="password" autocomplete="current-password" value="EdrDefault!01" /></label>
+          <label class="fld"><span class="lab">새 비밀번호</span><input class="inp" type="password" autocomplete="new-password" data-pw="new" value="Hanmaru#2611" /></label>
+          <label class="fld"><span class="lab">새 비밀번호 확인</span><input class="inp" type="password" autocomplete="new-password" data-pw="confirm" value="Hanmaru#2611" /><span class="msg" data-pw="match" aria-live="polite"></span></label>
+          <div class="full rules-box"><ul class="rules two" data-pw="rules"></ul></div>
+        </div>
+        <div class="form-foot">
+          <span class="msg" data-pw="summary" aria-live="polite"></span>
+          <button class="btn primary lg" type="submit" data-pw="submit">비밀번호 바꾸기</button>
+        </div>
+      </form>
+    </article>
+  </div>
+</div>
+
+<!-- 시안 화면 고르기(시안 전용, 제품에는 없다) -->
+<aside class="picker" id="picker" aria-label="시안 화면 고르기">
+  <header>SCREENS <button type="button" id="pickerMin">접기</button></header>
+  <div class="opts">
+    <a href="#settings-password">비밀번호 변경</a><a href="#settings-policy">보안정책</a>
+    <a href="#settings-ip">관리 IP</a><a href="#settings-ip-empty">관리 IP 빈 목록</a>
+    <a href="#settings-accounts">계정</a><a href="#audit">감사기록</a>
+    <a href="#selftest">자체점검</a><a href="#login">로그인 실패</a>
+    <a href="#force-password">기본 비밀번호 변경</a><a href="#viewer">viewer 화면</a>
+  </div>
+</aside>
+
+<script>
+  const root = document.documentElement
+  const $ = (s, el = document) => el.querySelector(s)
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)]
+  const params = new URLSearchParams(location.search)
+  if (params.has('shot')) document.body.classList.add('shot')
+
+  // 해·달 버튼: 미드나잇과 클라우드를 오간다
+  const themeBtn = $('#theme')
+  function setTheme(t) {
+    root.dataset.theme = t
+    root.dataset.tone = t === 'cloud' ? 'light' : 'dark'
+    const label = t === 'cloud' ? '다크 모드로 전환' : '라이트 모드로 전환'
+    themeBtn.setAttribute('aria-label', label)
+    themeBtn.title = label
+  }
+  themeBtn.addEventListener('click', () => setTheme(root.dataset.theme === 'cloud' ? 'midnight' : 'cloud'))
+  setTheme(params.has('cloud') ? 'cloud' : 'midnight')
+
+  // 비밀번호 규칙: 백엔드 AuthValidation.passwordError 와 같은 판정(키보드 줄과 그 역방향, 3자)
+  const KEY_ROWS = ['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm', '!@#$%^&*()'].flatMap((r) => [r, [...r].reverse().join('')])
+  function pwRules(pw, email) {
+    const low = pw.toLowerCase()
+    const id = (email || '').toLowerCase()
+    const windows = [...Array(Math.max(pw.length - 2, 0)).keys()].map((i) => low.slice(i, i + 3))
+    return [
+      ['9자 이상', pw.length >= 9, '', '9자 이상이어야 합니다.'],
+      ['영문 대문자 1개 이상', /[A-Z]/.test(pw), '', '영문 대문자가 들어가야 합니다.'],
+      ['영문 소문자 1개 이상', /[a-z]/.test(pw), '', '영문 소문자가 들어가야 합니다.'],
+      ['숫자 1개 이상', /[0-9]/.test(pw), '', '숫자가 들어가야 합니다.'],
+      ['특수문자 1개 이상', /[^A-Za-z0-9]/.test(pw), '', '특수문자가 들어가야 합니다.'],
+      ['아이디(이메일)와 다름', !id || (low !== id && low !== id.split('@')[0]), '', '아이디(이메일)와 같을 수 없습니다.'],
+      ['같은 문자 3번 연속 없음', !/(.)\1\1/.test(pw), 'aaa, 111', '같은 문자를 3번 연속 쓸 수 없습니다.'],
+      ['키보드 순서 3자 이상 없음', !windows.some((w) => KEY_ROWS.some((r) => r.includes(w))), 'qwe, 123', '키보드 순서대로 이어진 3자(qwe, 123 등)는 쓸 수 없습니다.'],
+    ]
+  }
+  function bindPw(box) {
+    const pick = (k) => $(`[data-pw="${k}"]`, box)
+    const [pw, confirm, list, match, summary, first, submit] = ['new', 'confirm', 'rules', 'match', 'summary', 'first', 'submit'].map(pick)
+    const emailOf = () => box.dataset.email || $(box.dataset.emailFrom)?.value || ''
+    function render() {
+      const v = pw.value
+      const rules = pwRules(v, emailOf())
+      const bad = rules.filter(([, ok]) => !ok)
+      const matched = !confirm || (confirm.value !== '' && confirm.value === v)
+      if (list) {
+        list.innerHTML = rules.map(([t, ok, ex]) =>
+          `<li class="${v ? (ok ? 'ok' : 'bad') : ''}"><i></i><span>${t}</span><small class="mono">${ex}</small></li>`).join('') +
+          `<li class="later"><i></i><span>직전 비밀번호와 다름</span><small>저장할 때 확인</small></li>`
+      }
+      pw.setAttribute('aria-invalid', v && bad.length ? 'true' : 'false')
+      if (first) {
+        first.className = 'msg' + (v ? (bad.length ? ' bad' : ' ok') : '')
+        first.textContent = !v ? '' : bad.length ? bad[0][3] : '비밀번호 규칙을 모두 지켰습니다.'
+      }
+      if (match) {
+        match.className = 'msg' + (confirm.value ? (matched ? ' ok' : ' bad') : '')
+        match.textContent = !confirm.value ? '' : matched ? '새 비밀번호와 같습니다.' : '새 비밀번호와 다릅니다.'
+        confirm.setAttribute('aria-invalid', confirm.value && !matched ? 'true' : 'false')
+      }
+      if (summary) {
+        summary.className = 'msg' + (v ? (bad.length ? ' bad' : ' ok') : '')
+        summary.textContent = !v ? '' : bad.length ? `규칙 ${rules.length}개 중 ${bad.length}개를 지키지 않았습니다.` : '규칙을 모두 지켰습니다.'
+      }
+      submit.disabled = !v || bad.length > 0 || !matched
+    }
+    ;[pw, confirm, $(box.dataset.emailFrom || 'x-none')].filter(Boolean).forEach((el) => el.addEventListener('input', render))
+    render()
+  }
+  $$('.pwbox').forEach(bindPw)
+
+  // 보안정책: 범위를 벗어나면 그 칸에 오류, 오른쪽 적용 내용은 입력에 따라 바뀐다
+  const pol = { fails: $('#polFails'), lock: $('#polLock'), idle: $('#polIdle') }
+  const saved = { fails: 5, lock: 30, idle: 15 }
+  function renderPolicy() {
+    let valid = true
+    Object.values(pol).forEach((el) => {
+      const n = Number(el.value)
+      const ok = el.value !== '' && Number.isInteger(n) && n >= Number(el.min) && (!el.max || n <= Number(el.max))
+      const msg = el.closest('.unit').nextElementSibling
+      msg.className = 'msg' + (ok ? '' : ' bad')
+      msg.textContent = ok ? msg.dataset.hint : `${msg.dataset.hint}로 입력하세요`
+      el.setAttribute('aria-invalid', ok ? 'false' : 'true')
+      valid = valid && ok
+    })
+    $('#policySave').disabled = !valid
+    $('#policyApplied').innerHTML = valid
+      ? `<p><b>${pol.fails.value}번</b> 연속으로 틀리면 그 계정은 <b>${pol.lock.value}분</b> 동안 로그인할 수 없습니다.</p>
+         <p><b>${pol.idle.value}분</b> 동안 아무 조작이 없으면 로그아웃합니다.</p>`
+      : '<p style="color:var(--mid)">범위를 벗어난 값이 있어 저장할 수 없습니다.</p>'
+  }
+  Object.values(pol).forEach((el) => el.addEventListener('input', renderPolicy))
+  $('#policyReset').addEventListener('click', () => { Object.entries(saved).forEach(([k, v]) => { pol[k].value = v }); renderPolicy() })
+  renderPolicy()
+
+  // 관리 IP: 단일 IPv4·IPv6 만 받는다. 형식의 최종 판정은 서버가 한다
+  const myIp = $('#myIp').textContent
+  let ips = [
+    { ip: '203.0.113.24', by: 'admin@hanmaru.co.kr', at: '11-02 09:14' },
+    { ip: '198.51.100.17', by: 'admin@hanmaru.co.kr', at: '11-02 09:16' },
+    { ip: '10.20.1.15', by: 'admin@hanmaru.co.kr', at: '11-05 17:40' },
+  ]
+  const isV4 = (s) => /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/.test(s)
+  const isV6 = (s) => /^[0-9a-f:]+$/i.test(s) && s.includes('::') ? s.split('::').length === 2 : /^([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}$/i.test(s)
+  function ipError(s) {
+    if (!s) return ''
+    if (/[\/*,~\s]/.test(s) || (/-/.test(s))) return '범위, 와일드카드, 여러 개는 등록할 수 없습니다. IP 하나만 입력하세요.'
+    if (!isV4(s) && !isV6(s)) return 'IP 주소 형식이 아닙니다.'
+    if (ips.some((r) => r.ip === s)) return '이미 목록에 있는 IP 입니다.'
+    if (!ips.length && s !== myIp) return `처음 등록하는 IP 는 지금 내 IP(${myIp})여야 합니다.`
+    return ''
+  }
+  function renderIp() {
+    const tab = $('#t-ip')
+    tab.classList.toggle('empty', ips.length === 0)
+    const mine = ips.some((r) => r.ip === myIp)
+    $('#ipCount').textContent = `${ips.length}개`
+    $('#ipState').innerHTML = ips.length
+      ? `<b>제한 켜짐 <span class="st good">${mine ? '내 IP 는 목록에 있음' : ''}</span></b><p>목록에 있는 IP ${ips.length}개에서만 로그인하고 관리 화면을 쓸 수 있습니다.</p>`
+      : `<b>제한 없음 <span class="st none">목록 비어 있음</span></b><p>어느 IP 에서든 로그인할 수 있습니다.</p>`
+    $('#ipRows').innerHTML = ips.map((r) => {
+      const lock = r.ip === myIp && ips.length > 1
+      return `<tr><td class="ip">${r.ip}${r.ip === myIp ? '<span class="tag">내 IP</span>' : ''}</td><td style="font-size:12.5px;color:var(--ink-2)">${r.by}</td><td class="d">${r.at}</td>
+        <td><button class="btn ghost" type="button" data-del="${r.ip}" ${lock ? 'disabled title="다른 IP 가 남아 있는 동안 내 IP 는 뺄 수 없습니다"' : ''} aria-label="${r.ip} 삭제">삭제</button></td></tr>`
+    }).join('')
+    checkIp()
+  }
+  function checkIp() {
+    const input = $('#ipInput')
+    const err = ipError(input.value.trim())
+    $('#ipMsg').className = 'msg' + (err ? ' bad' : '')
+    $('#ipMsg').textContent = err
+    input.setAttribute('aria-invalid', err ? 'true' : 'false')
+    $('#ipAdd').disabled = !input.value.trim() || !!err
+  }
+  $('#ipInput').addEventListener('input', checkIp)
+  $('#ipForm').addEventListener('submit', () => {
+    const s = $('#ipInput').value.trim()
+    if (!s || ipError(s)) return
+    ips.push({ ip: s, by: 'admin@hanmaru.co.kr', at: '11-11 05:44' })
+    $('#ipInput').value = ''
+    renderIp()
+  })
+  $('#ipRows').addEventListener('click', (e) => {
+    const ip = e.target.closest('[data-del]')?.dataset.del
+    if (ip) { ips = ips.filter((r) => r.ip !== ip); renderIp() }
+  })
+  $('#ipStart').addEventListener('click', () => { ips = [{ ip: myIp, by: 'admin@hanmaru.co.kr', at: '11-11 05:44' }]; renderIp() })
+
+  // 계정 만들기: 응답에 비밀번호가 없으므로 성공 문구에도 싣지 않는다
+  $('#acForm').addEventListener('submit', () => {
+    const email = $('#acEmail').value.trim()
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('#acEmailMsg').className = 'msg bad'; $('#acEmailMsg').textContent = '이메일 형식이 아닙니다.'; return }
+    $('#acEmailMsg').textContent = ''
+    $('#acDoneText').textContent = `${email} 는 viewer 로 로그인할 수 있습니다.`
+    $('#acDone').hidden = false
+  })
+
+  // 감사기록 예시 데이터(최신순). 종류는 색 없이 글자로만 구분한다
+  const typeLabel = {
+    login_success: '로그인', login_failure: '로그인 실패', logout: '로그아웃', auth_lockout: '계정 잠금', password_change: '비밀번호 변경',
+    admin_ip_block: '관리 IP 차단', admin_ip_change: '관리 IP 변경', access_denied: '권한 거부', account_create: '계정 생성',
+    security_policy_change: '보안정책 변경', kill_request: '대응 요청', command_result: '명령 결과', self_test_result: '서버 자체시험',
+    integrity_check_result: '서버 무결성 검증', security_check: '에이전트 자체시험', integrity_check: '에이전트 무결성 검증', agent_start: '에이전트 시작',
+  }
+  const A = 'admin@hanmaru.co.kr', V = 'jiwoo.park@hanmaru.co.kr'
+  const audit = [
+    ['11-11 05:31:40', 'system', 'api-service', 'integrity_check_result', '/app/config/application.yml', 0, '-', 'SHA-256 불일치'],
+    ['11-11 05:31:40', 'system', 'api-service', 'self_test_result', '서버', 1, '-', '요청 실행, 5개 항목 PASS'],
+    ['11-11 05:24:02', 'user', A, 'login_success', A, 1, '203.0.113.24', ''],
+    ['11-11 05:12:47', 'user', V, 'auth_lockout', V, 0, '-', '연속 5회 인증 실패, 30분 잠금'],
+    ['11-11 05:12:47', 'user', V, 'login_failure', V, 0, '198.51.100.83', ''],
+    ['11-11 05:12:31', 'user', V, 'login_failure', V, 0, '198.51.100.83', ''],
+    ['11-11 05:12:09', 'user', V, 'login_failure', V, 0, '198.51.100.83', ''],
+    ['11-11 04:58:10', 'user', A, 'admin_ip_block', 'GET /api/alerts', 0, '192.0.2.61', '허용 목록 밖 IP'],
+    ['11-11 04:41:33', 'agent', 'WIN-FIN-02', 'integrity_check', 'edrdog-agent', 1, '-', '바이너리와 설정 SHA-256 일치'],
+    ['11-11 04:41:33', 'agent', 'WIN-FIN-02', 'security_check', 'edrdog-agent', 1, '-', '센서 4종 동작'],
+    ['11-11 03:02:21', 'agent', 'WIN-FIN-02', 'command_result', 'kill_process', 1, '-', 'powershell.exe (PID 6412) 종료'],
+    ['11-11 03:02:19', 'user', A, 'kill_request', 'WIN-FIN-02', 1, '203.0.113.24', 'powershell.exe, 명령 cmd-7f3a91'],
+    ['11-10 18:20:05', 'user', A, 'password_change', A, 1, '203.0.113.24', ''],
+    ['11-10 14:22:51', 'user', A, 'security_policy_change', '보안정책', 1, '203.0.113.24', '잠금 10분에서 30분, 유휴 30분에서 15분'],
+    ['11-10 14:20:12', 'user', A, 'account_create', V, 1, '203.0.113.24', '역할 viewer'],
+    ['11-10 11:05:44', 'user', V, 'access_denied', 'PATCH /api/alerts/a-1042', 0, '198.51.100.83', '필요한 역할 admin'],
+    ['11-10 09:00:00', 'system', 'api-service', 'self_test_result', '서버', 1, '-', '주기 실행, 5개 항목 PASS'],
+    ['11-10 08:47:12', 'agent', 'WIN-HR-03', 'agent_start', 'edrdog-agent', 1, '-', '서비스 시작'],
+    ['11-10 08:31:09', 'user', A, 'admin_ip_change', '10.20.1.15', 1, '203.0.113.24', '추가'],
+    ['11-10 08:12:30', 'user', A, 'login_success', A, 1, '203.0.113.24', ''],
+  ]
+  let auditDesc = true
+  let auditFilter = ''
+  function renderAudit() {
+    const rows = (auditDesc ? audit : [...audit].reverse()).filter((r) => !auditFilter || (auditFilter === 'ok') === !!r[5])
+    $('#auditRows').innerHTML = rows.map(([ts, kind, who, type, tgt, ok, ip, det]) => `<tr>
+      <td class="d">${ts}</td><td><span class="tag mute">${kind}</span></td>
+      <td class="who ell${kind === 'user' ? '' : ' host'}" title="${who}">${who}</td>
+      <td class="t"><b class="ell">${typeLabel[type] || type}</b><code class="ell">${type}</code></td>
+      <td class="tgt ell" title="${tgt}">${tgt}</td>
+      <td><span class="res ${ok ? 'ok' : 'fail'}">${ok ? '성공' : '실패'}</span></td>
+      <td class="d">${ip}</td><td class="det ell" title="${det}">${det || '<span style="color:var(--faint)">-</span>'}</td></tr>`).join('')
+  }
+  $('#auditSort').addEventListener('click', (e) => {
+    auditDesc = !auditDesc
+    e.currentTarget.closest('th').setAttribute('aria-sort', auditDesc ? 'descending' : 'ascending')
+    e.currentTarget.setAttribute('aria-label', `시각 정렬, 지금 ${auditDesc ? '최신순' : '오래된 순'}`)
+    renderAudit()
+  })
+  $$('#auditResult button').forEach((b) => b.addEventListener('click', () => {
+    $$('#auditResult button').forEach((x) => x.classList.toggle('on', x === b))
+    auditFilter = b.dataset.r
+    renderAudit()
+  }))
+  $$('#auditRange button').forEach((b) => b.addEventListener('click', () => $$('#auditRange button').forEach((x) => x.classList.toggle('on', x === b))))
+  renderAudit()
+
+  // 자체점검 예시: 항목 이름은 api-service SelfTestChecks·IntegrityVerifier 의 것
+  const selftest = [
+    ['database', 'MySQL 에 질의가 된다'], ['password_hash', 'BCrypt 가 알려진 해시를 맞게 판별한다'],
+    ['random', '토큰 생성기가 서로 다른 43자 토큰을 낸다'], ['sha256', 'SHA-256 이 표준 시험 벡터와 같다'],
+    ['security_config', 'API 키와 내부 키가 설정돼 있다'],
+  ].map(([n, d]) => ['자체시험', n, 'PASS', d])
+  const integrityOk = [
+    ['무결성', '/app/api-service.jar', 'PASS', 'SHA-256 일치 <code>4f1c0e9b…d29a07</code>'],
+    ['무결성', '/app/config/application.yml', 'PASS', 'SHA-256 일치 <code>8e2d77a1…5c41bc</code>'],
+    ['무결성', '/app/config/logback-spring.xml', 'PASS', 'SHA-256 일치 <code>1b7e3f02…a8d3c0</code>'],
+  ]
+  const itemSets = {
+    fail: [...selftest, integrityOk[0], ['무결성', '/app/config/application.yml', 'FAIL', 'SHA-256 불일치. 기준 <code>8e2d77a1…5c41bc</code>, 실제 <code>c09a4be6…e07f12</code>'], integrityOk[2]],
+    pass: [...selftest, ...integrityOk],
+    skip: [...selftest, ['무결성', 'baseline', 'SKIP', '기준값 파일이 설정되지 않아 검증하지 않았다']],
+  }
+  const runs = [
+    { ts: '11-11 05:31:40', trig: '요청', by: A, status: 'FAIL', set: 'fail' },
+    { ts: '11-11 03:00:00', trig: '주기', by: '시스템', status: 'PASS', set: 'pass' },
+    { ts: '11-10 21:00:00', trig: '주기', by: '시스템', status: 'PASS', set: 'pass' },
+    { ts: '11-10 15:00:00', trig: '주기', by: '시스템', status: 'PASS', set: 'pass' },
+    { ts: '11-10 09:00:00', trig: '주기', by: '시스템', status: 'PASS', set: 'pass' },
+    { ts: '11-10 08:46:55', trig: '기동', by: '시스템', status: 'PASS', set: 'pass' },
+    { ts: '11-09 08:12:30', trig: '기동', by: '시스템', status: 'PASS', set: 'skip' },
+  ]
+  const badge = (s) => `<span class="sev mono ${s === 'PASS' ? 'good' : s === 'FAIL' ? 'crit' : 'mute'}">${s}</span>`
+  let picked = 0
+  function renderRuns() {
+    $('#runCount').textContent = `${runs.length}회`
+    $('#runList').innerHTML = runs.map((r, i) => `<li tabindex="0" role="button" class="${i === picked ? 'on' : ''}" ${i === picked ? 'aria-current="true"' : ''} data-i="${i}">
+      <i style="background:${r.status === 'FAIL' ? 'var(--crit)' : 'var(--line-strong)'}"></i>
+      <div><b>${r.ts}</b><span>${r.trig} · ${r.by}</span></div>${badge(r.status)}</li>`).join('')
+    const r = runs[picked]
+    const items = itemSets[r.set]
+    const fails = items.filter((it) => it[2] === 'FAIL')
+    const skips = items.filter((it) => it[2] === 'SKIP')
+    const head = fails.length ? `${fails[0][0]} ${fails.length}건 실패` : skips.length ? `통과, ${skips.length}개 항목 건너뜀` : '모든 항목 통과'
+    $('#runDetail').innerHTML = `<div class="fm-h">
+        <div class="focus-top">${badge(r.status)}<span class="tag mute">${r.trig}</span><span class="focus-time">${r.ts}</span></div>
+        <h2>${head}</h2>
+        <p class="focus-host">요청자 <b>${r.by}</b> · 항목 ${items.length}개</p>
+      </div>
+      <table class="items">
+        <colgroup><col style="width:104px" /><col style="width:250px" /><col style="width:84px" /><col /></colgroup>
+        <thead><tr><th>분류</th><th>이름</th><th>결과</th><th>상세</th></tr></thead>
+        <tbody>${items.map(([cat, name, res, det]) => `<tr class="${res === 'FAIL' ? 'fail' : ''}"><td style="font-size:12.5px;color:var(--ink-2)">${cat}</td><td class="nm">${name}</td><td>${badge(res)}</td><td class="det">${det}</td></tr>`).join('')}</tbody>
+      </table>
+      ${fails.length ? `<div class="advice" style="margin-top:20px"><div><small>CHECK</small><p><b>${fails[0][1].split('/').pop()}</b> 이 기준값과 다릅니다. 배포 뒤 바꾼 적이 없다면 변조를 의심하고 파일을 확인하세요.</p></div></div>` : '<div style="height:20px"></div>'}`
+  }
+  $('#runList').addEventListener('click', (e) => { const li = e.target.closest('li'); if (li) { picked = Number(li.dataset.i); renderRuns() } })
+  $('#runList').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset.i) { e.preventDefault(); picked = Number(e.target.dataset.i); renderRuns() } })
+  $('#runNow').addEventListener('click', (e) => {
+    const btn = e.currentTarget
+    btn.disabled = true
+    btn.textContent = '실행 중'
+    setTimeout(() => {
+      runs.unshift({ ts: '11-11 05:44:12', trig: '요청', by: A, status: 'FAIL', set: 'fail' })
+      picked = 0
+      btn.disabled = false
+      btn.textContent = '지금 실행'
+      renderRuns()
+    }, 1200)
+  })
+  renderRuns()
+
+  // 화면 전환: 주소의 # 로 고른다. 스크린샷은 ?shot 으로 고르기 패널을 숨긴다
+  const routes = {
+    settings: ['EDRDOG / PLATFORM / SETTINGS', '설정', 'settings'],
+    audit: ['EDRDOG / PLATFORM / AUDIT', '감사기록', 'audit'],
+    selftest: ['EDRDOG / PLATFORM / SELF-TEST', '자체점검', 'selftest'],
+    viewer: ['EDRDOG / TRIAGE / THREATS', '위협', 'threats'],
+  }
+  function go() {
+    const hash = location.hash.slice(1) || 'settings-password'
+    $$('.picker .opts a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + hash))
+    document.body.dataset.screen = hash === 'login' ? 'login' : hash === 'force-password' ? 'force' : 'app'
+    if (document.body.dataset.screen !== 'app') return window.scrollTo(0, 0)
+    const [view, tab = 'password', variant] = hash.split('-')
+    const route = routes[view] || routes.settings
+    const viewer = view === 'viewer'
+    root.dataset.role = viewer ? 'viewer' : 'admin'
+    $('#meEmail').textContent = $('#meEmail').title = viewer ? V : A
+    $('#meAv').textContent = viewer ? 'J' : 'A'
+    $('#meRole').textContent = viewer ? 'VIEWER' : 'ADMIN'
+    $$('.view').forEach((v) => v.classList.toggle('on', v.id === 'v-' + (routes[view] ? view : 'settings')))
+    $$('.nav a[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === route[2]))
+    $('#crumb').textContent = route[0]
+    $('#title').textContent = route[1]
+    if (route === routes.settings) {
+      $$('[role="tab"][data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)))
+      $$('.tabpanel').forEach((p) => p.classList.toggle('on', p.id === 't-' + tab))
+      if (tab === 'ip') {
+        if (variant === 'empty') { ips = []; $('#ipInput').value = '' }
+        else if (!ips.length) ips = [{ ip: myIp, by: A, at: '11-02 09:14' }, { ip: '198.51.100.17', by: A, at: '11-02 09:16' }, { ip: '10.20.1.15', by: A, at: '11-05 17:40' }]
+        renderIp()
+      }
+    }
+    window.scrollTo(0, 0)
+  }
+  $$('[role="tab"][data-tab]').forEach((b) => b.addEventListener('click', () => { location.hash = 'settings-' + b.dataset.tab }))
+  $$('.nav a[href="#"]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault()))
+  window.addEventListener('hashchange', go)
+  go()
+
+  $('#pickerMin').addEventListener('click', (e) => {
+    const min = $('#picker').classList.toggle('min')
+    e.currentTarget.textContent = min ? '펼치기' : '접기'
+  })
+</script>
+</body>
+</html>
