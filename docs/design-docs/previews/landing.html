@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EDRdog · 엔드포인트 위협 탐지·대응</title>
+<meta name="description" content="서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다." />
+<link rel="icon" href="logo.png" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<style>
+  /* 토큰: DESIGN.md 와 같은 값 */
+  :root {
+    /* 미드나잇 (DESIGN.md 2장) */
+    --bg: #0a0e17; --shell: #0e1320; --panel: #121a2a; --raised: #151c2b; --hover: #1b2335;
+    --line: #1f2838; --line-strong: #2b3549;
+    --ink: #eef2f8; --ink-2: #c6cedb; --mid: #97a3b6; --faint: #75819a;
+    --accent: #3a72ff; --accent-hi: #5285ff; --accent-ink: #9dbbff;
+    --crit: #f04848; --high: #f7811f; --med: #e5b80b; --good: #2fc471; --low: #5aa2ff;
+    --sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --wrap: 1200px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 32px; }
+  .mono { font-family: var(--mono); }
+  .eyebrow { font: 600 12px var(--mono); letter-spacing: 0.14em; color: var(--accent-ink); text-transform: uppercase; }
+
+  /* 버튼 */
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 6px; font-size: 15px; font-weight: 600; border: 1px solid var(--line-strong); background: var(--raised); transition: background-color 160ms, border-color 160ms, transform 100ms; }
+  .btn:hover { background: var(--hover); border-color: #4a4a54; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hi); }
+  .btn.sm { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 5px; }
+  .btn:focus-visible, .nav a:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+  .btn .arrow { transition: transform 160ms; }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  /* 상단 내비 */
+  .nav { position: fixed; inset: 0 0 auto; z-index: 40; height: 64px; display: flex; align-items: center; transition: background-color 200ms, border-color 200ms; border-bottom: 1px solid transparent; }
+  .nav.solid { background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(12px); border-color: var(--line); }
+  .nav .wrap { width: 100%; display: flex; align-items: center; gap: 36px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+  .logo img { width: 28px; height: 28px; padding: 2px; border-radius: 50%; background: #fff; }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--mid); }
+  .nav-links a { transition: color 140ms; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav .right { margin-left: auto; display: flex; gap: 8px; }
+
+  /* 히어로 */
+  .hero { position: relative; padding: 168px 0 0; overflow: hidden; }
+  .hero-bg { position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 64px 64px;
+    mask-image: radial-gradient(70% 60% at 50% 20%, #000 30%, transparent 80%);
+    opacity: 0.55; }
+  .hero-glow { position: absolute; left: 50%; top: 120px; width: 720px; height: 720px; margin-left: -360px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%); filter: blur(20px); pointer-events: none; animation: drift 12s ease-in-out infinite alternate; }
+  @keyframes drift { to { transform: translate(80px, 40px) scale(1.1); } }
+  .hero-copy { position: relative; text-align: center; }
+  .hero-tag { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 5px; background: color-mix(in srgb, var(--shell) 70%, transparent); font-size: 13px; color: var(--ink-2); }
+  .hero-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 rgba(47, 196, 113, 0.5); animation: ping 2.2s infinite; }
+  @keyframes ping { 70% { box-shadow: 0 0 0 7px rgba(47, 196, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 196, 113, 0); } }
+  h1 { margin-top: 28px; font-size: clamp(44px, 6.6vw, 88px); line-height: 1.12; font-weight: 700; letter-spacing: -0.045em; }
+  h1 .line { display: block; overflow: hidden; padding-bottom: 0.04em; }
+  h1 .line > span { display: inline-block; }
+  h1 em { font-style: normal; color: var(--accent-ink); }
+  .hero-sub { max-width: 560px; margin: 24px auto 0; font-size: 18px; color: var(--mid); text-wrap: balance; }
+  .hero-cta { display: flex; justify-content: center; gap: 10px; margin-top: 36px; }
+
+  /* 제품 화면: 스크롤하면 기울기가 펴진다 */
+  .stage { position: relative; perspective: 1600px; margin-top: 88px; }
+  .shot { position: relative; max-width: 1120px; margin: 0 auto; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); overflow: hidden; transform-origin: 50% 0; box-shadow: 0 -1px 0 rgba(255,255,255,0.04) inset, 0 40px 120px color-mix(in srgb, var(--accent) 16%, transparent); }
+  .shot-bar { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--shell); }
+  .shot-bar .dots { display: flex; gap: 6px; }
+  .shot-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+  .shot-bar .url { flex: 1; max-width: 360px; margin: 0 auto; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: var(--panel); font: 500 11px var(--mono); color: var(--faint); }
+  .shot-body { display: grid; grid-template-columns: 180px 1fr; min-height: 520px; }
+  .shot-side { border-right: 1px solid var(--line); background: var(--shell); padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); }
+  .shot-side b { font: 600 9px var(--mono); letter-spacing: 0.14em; color: var(--faint); padding: 10px 8px 4px; }
+  .shot-side span { padding: 7px 8px; border-radius: 4px; }
+  .shot-side span.on { background: var(--accent); color: #fff; }
+  .shot-main { padding: 16px; display: grid; gap: 10px; grid-template-rows: auto auto 1fr; }
+  .s-strip { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; color: var(--mid); }
+  .s-strip div { padding: 9px 12px; border-left: 1px solid var(--line); display: flex; justify-content: space-between; }
+  .s-strip div:first-child { border-left: 0; }
+  .s-strip b { font: 600 12px var(--mono); color: var(--ink); }
+  .s-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .s-kpi { border: 1px solid var(--line); border-radius: 5px; padding: 12px; font-size: 11px; color: var(--ink-2); }
+  .s-kpi b { display: block; margin-top: 6px; font: 600 26px/1 var(--mono); letter-spacing: -0.03em; }
+  .s-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; }
+  .s-panel { border: 1px solid var(--line); border-radius: 5px; padding: 12px; font-size: 12px; }
+  .s-panel h4 { font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+  .s-row { display: flex; align-items: center; gap: 8px; padding: 8px 0 8px 10px; border-top: 1px solid var(--line); color: var(--ink-2); }
+  .s-row.c { box-shadow: inset 2px 0 0 var(--crit); }
+  .s-row.h { box-shadow: inset 2px 0 0 var(--high); }
+  .s-row small { margin-left: auto; font: 500 10px var(--mono); color: var(--faint); }
+  .s-split { display: flex; gap: 2px; height: 8px; margin: 12px 0; }
+  .s-split i { border-radius: 1px; }
+  .s-leg { display: grid; gap: 6px; color: var(--ink-2); font-size: 11px; }
+  .s-leg div { display: flex; justify-content: space-between; }
+  .s-leg b { font-family: var(--mono); }
+  .shot-fade { position: absolute; inset: auto 0 0; height: 40%; background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
+
+  /* 이벤트 흐름 띠 */
+  .ticker { margin-top: -40px; position: relative; border-block: 1px solid var(--line); background: var(--panel); overflow: hidden; }
+  .ticker-track { display: flex; gap: 48px; width: max-content; padding: 14px 0; font: 500 12px var(--mono); color: var(--mid); animation: tick 40s linear infinite; }
+  .ticker-track span { display: inline-flex; gap: 10px; align-items: center; white-space: nowrap; }
+  .ticker-track i { width: 6px; height: 6px; border-radius: 50%; }
+  @keyframes tick { to { transform: translateX(-50%); } }
+
+  /* 섹션 공통 */
+  section.block { padding: 160px 0; }
+  h2 { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.2; font-weight: 700; letter-spacing: -0.04em; text-wrap: balance; }
+  .lead { margin-top: 20px; max-width: 560px; font-size: 18px; color: var(--mid); }
+
+  /* 토스식 문장: 스크롤하면 단어가 차례로 밝아진다 */
+  .statement { padding: 200px 0; }
+  .statement p { max-width: 980px; font-size: clamp(32px, 4.6vw, 60px); line-height: 1.32; font-weight: 700; letter-spacing: -0.04em; }
+  .statement .w { opacity: 0.16; }
+  .statement .w.accent { color: var(--crit); }
+
+  /* 공격 경로: 고정된 채 단계가 이어진다 */
+  .chain-sec { height: 100vh; display: flex; align-items: center; }
+  .chain-sec .wrap { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .stage-copy { position: relative; min-height: 300px; }
+  .stage-copy article { position: absolute; inset: 0; }
+  .stage-copy article + article { opacity: 0; }
+  .stage-copy .num { font: 600 13px var(--mono); color: var(--faint); }
+  .stage-copy .num b { color: var(--accent-ink); }
+  .stage-copy h3 { margin-top: 14px; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.2; letter-spacing: -0.04em; font-weight: 700; }
+  .stage-copy p { margin-top: 18px; font-size: 17px; color: var(--mid); max-width: 440px; }
+  .progress { display: flex; gap: 6px; margin-top: 28px; }
+  .progress i { width: 28px; height: 3px; border-radius: 2px; background: var(--line-strong); }
+  .progress i b { display: block; height: 100%; width: 100%; border-radius: 2px; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+
+  .chain-card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+  .chain-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 700; }
+  .chain-head .tag { margin-left: auto; font: 500 11px var(--mono); color: var(--accent-ink); padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--accent-ink) 30%, transparent); border-radius: 3px; }
+  .nodes { position: relative; padding: 22px 22px 6px 22px; }
+  .rail { position: absolute; left: 41px; top: 40px; bottom: 40px; width: 2px; background: var(--line); }
+  .rail b { position: absolute; inset: 0; background: linear-gradient(var(--accent), var(--crit)); transform: scaleY(0); transform-origin: top; }
+  .node { position: relative; display: grid; grid-template-columns: 40px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; opacity: 0.28; }
+  .node .dot { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--raised); font: 600 12px var(--mono); color: var(--mid); position: relative; z-index: 1; }
+  .node .k { font-size: 12px; color: var(--mid); }
+  .node .n { font: 600 15px var(--mono); }
+  .node .t { font: 500 11px var(--mono); color: var(--faint); }
+  .node.hot .dot { border-color: var(--high); color: var(--high); background: rgba(247, 129, 31, 0.1); }
+  .node.hot .n { color: var(--high); }
+  .node.crit .dot { border-color: var(--crit); color: var(--crit); background: rgba(240, 72, 72, 0.1); }
+  .node.crit .n { color: var(--crit); }
+  .advice { margin: 10px 22px 22px; padding: 14px 16px; border-radius: 6px; background: var(--raised); border-left: 2px solid var(--accent); opacity: 0; transform: translateY(12px); }
+  .advice small { font: 600 10px var(--mono); letter-spacing: 0.12em; color: var(--faint); }
+  .advice p { margin-top: 2px; font-size: 14px; }
+  .advice p b { font-family: var(--mono); }
+  .advice .acts { display: flex; gap: 6px; margin-top: 12px; }
+
+  /* 기능: 세로 스크롤로 가로로 넘어간다 */
+  .hscroll { height: 100vh; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+  .hscroll .head { margin-bottom: 48px; }
+  .track { display: flex; gap: 20px; padding-left: max(32px, calc((100vw - var(--wrap)) / 2 + 32px)); width: max-content; }
+  .card { width: 440px; min-height: 380px; display: flex; flex-direction: column; padding: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); transition: border-color 200ms, background-color 200ms; }
+  .card:hover { border-color: var(--line-strong); background: var(--raised); }
+  .card .idx { font: 600 12px var(--mono); color: var(--faint); }
+  .card h3 { margin-top: 12px; font-size: 26px; letter-spacing: -0.03em; line-height: 1.3; }
+  .card p { margin-top: 14px; color: var(--mid); font-size: 16px; }
+  .card .vis { margin-top: auto; padding-top: 28px; }
+  .vis-bars { display: flex; align-items: flex-end; gap: 6px; height: 72px; }
+  .vis-bars i { flex: 1; border-radius: 2px 2px 0 0; background: var(--line-strong); animation: eq 1.6s ease-in-out infinite alternate; }
+  @keyframes eq { from { transform: scaleY(0.35); } }
+  .vis-bars i { transform-origin: bottom; }
+  .vis-seq { display: flex; align-items: center; gap: 6px; font: 500 11px var(--mono); color: var(--ink-2); }
+  .vis-seq span { padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 4px; }
+  .vis-seq span:last-child { border-color: var(--crit); color: var(--crit); }
+  .vis-seq em { font-style: normal; color: var(--faint); }
+  .vis-cmd { padding: 12px 14px; border-radius: 5px; background: var(--bg); border: 1px solid var(--line); font: 500 12px var(--mono); color: var(--ink-2); }
+  .vis-cmd b { color: var(--good); font-weight: 500; }
+  .vis-cmd .cur { display: inline-block; width: 7px; height: 14px; background: var(--ink-2); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .vis-doc { display: grid; gap: 8px; }
+  .vis-doc i { height: 8px; border-radius: 2px; background: var(--line-strong); }
+
+  /* 수치: 큰 숫자가 올라간다 */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-block: 1px solid var(--line); }
+  .stats div { padding: 48px 32px; border-left: 1px solid var(--line); }
+  .stats div:first-child { border-left: 0; }
+  .stats b { display: block; font: 600 clamp(44px, 5vw, 64px)/1 var(--mono); letter-spacing: -0.04em; }
+  .stats span { display: block; margin-top: 14px; color: var(--mid); }
+
+  /* 마지막 행동 유도 */
+  .cta { position: relative; padding: 200px 0 180px; text-align: center; overflow: hidden; }
+  .cta::before { content: ''; position: absolute; left: 50%; bottom: -320px; width: 900px; height: 640px; margin-left: -450px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 25%, transparent), transparent 65%); pointer-events: none; }
+  .cta h2 { position: relative; max-width: 820px; margin: 0 auto; font-size: clamp(36px, 5vw, 64px); }
+  .cta .lead { margin: 20px auto 0; }
+  .cta .hero-cta { position: relative; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0; color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; align-items: center; gap: 24px; }
+  footer .links { margin-left: auto; display: flex; gap: 20px; }
+  footer a:hover { color: var(--ink); }
+
+  /* 시작 전 숨김: 스크립트가 있을 때만 */
+  .js .reveal { opacity: 0; transform: translateY(24px); }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .shot-body { grid-template-columns: 1fr; }
+    .shot-side { display: none; }
+    .s-grid, .chain-sec .wrap { grid-template-columns: 1fr; }
+    .chain-sec { height: auto; padding: 120px 0; }
+    .stage-copy { min-height: 0; }
+    .stage-copy article { position: static; opacity: 1 !important; margin-bottom: 40px; }
+    .hscroll { height: auto; }
+    .track { flex-direction: column; width: auto; padding: 0 32px; }
+    .card { width: auto; }
+    .stats { grid-template-columns: 1fr; }
+    .stats div { border-left: 0; border-top: 1px solid var(--line); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add('js')</script>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="logo" href="#top"><img src="logo.png" alt="" />EDRdog</a>
+    <nav class="nav-links" aria-label="섹션">
+      <a href="#how">동작 방식</a><a href="#path">공격 경로</a><a href="#features">기능</a><a href="#start">시작하기</a>
+    </nav>
+    <div class="right"><a class="btn sm" href="#">대시보드 둘러보기</a><a class="btn sm primary" href="#">로그인</a></div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 히어로 -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-glow"></div>
+    <div class="wrap hero-copy">
+      <span class="hero-tag hero-in"><i></i>엔드포인트 위협 탐지·대응</span>
+      <h1>
+        <span class="line"><span>엔드포인트 위협을</span></span>
+        <span class="line"><span>탐지하고 바로 <em>대응</em>합니다</span></span>
+      </h1>
+      <p class="hero-sub hero-in">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+      <div class="hero-cta hero-in">
+        <a class="btn primary" href="#">로그인<span class="arrow">→</span></a>
+        <a class="btn" href="#">대시보드 둘러보기</a>
+      </div>
+    </div>
+
+    <div class="stage wrap">
+      <div class="shot" id="shot">
+        <div class="shot-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">edrdog.duckdns.org/dashboard</div></div>
+        <div class="shot-body">
+          <div class="shot-side">
+            <span class="on">대시보드</span>
+            <b>TRIAGE</b><span>위협</span><span>사건</span>
+            <b>EVIDENCE</b><span>엔드포인트</span><span>수집 로그</span>
+            <b>ANALYSIS</b><span>위협 지도</span><span>관계 분석</span>
+          </div>
+          <div class="shot-main">
+            <div class="s-strip"><div>수집 이벤트<b>18,402</b></div><div>규칙 적중<b>9</b></div><div>관리 엔드포인트<b>1,250</b></div><div>외부 목적지<b>2</b></div></div>
+            <div class="s-kpis">
+              <div class="s-kpi">미판단 위협<b>5</b></div>
+              <div class="s-kpi">심각 위협<b style="color:var(--crit)">2</b></div>
+              <div class="s-kpi">위험 엔드포인트<b style="color:var(--high)">50</b></div>
+              <div class="s-kpi">이번 주 탐지<b>9</b></div>
+            </div>
+            <div class="s-grid">
+              <div class="s-panel">
+                <h4>지금 확인이 필요한 위협</h4>
+                <div class="s-row c">관리자 권한 상승 시도<small>2분 전</small></div>
+                <div class="s-row c">자격증명 접근 탐지<small>5분 전</small></div>
+                <div class="s-row h">비정상 외부 연결<small>12분 전</small></div>
+                <div class="s-row h">인코딩된 PowerShell 명령 실행<small>31분 전</small></div>
+              </div>
+              <div class="s-panel">
+                <h4>엔드포인트 상태</h4>
+                <div style="font:600 24px var(--mono)">1,250<span style="font:400 12px var(--sans);color:var(--mid)"> 대</span></div>
+                <div class="s-split"><i style="flex:1080;background:var(--good)"></i><i style="flex:120;background:var(--med)"></i><i style="flex:50;background:var(--crit)"></i></div>
+                <div class="s-leg"><div>정상<b>1,080</b></div><div>주의<b>120</b></div><div>위험<b>50</b></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="shot-fade"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 이벤트 흐름 띠 -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track" id="ticker"></div>
+  </div>
+
+  <!-- 토스식 문장 -->
+  <section class="statement wrap" id="how">
+    <p id="statement">따로 보면 정상 같은 행동도, 시간 순서로 이으면 *공격이* *됩니다.* EDRdog 은 흩어진 신호를 하나의 공격 경로로 재구성합니다.</p>
+  </section>
+
+  <!-- 공격 경로 (고정) -->
+  <section class="chain-sec" id="path">
+    <div class="wrap">
+      <div>
+        <div class="stage-copy">
+          <article>
+            <div class="num"><b>01</b> / 03</div>
+            <h3>탐지</h3>
+            <p>엔드포인트에서 일어나는 프로세스·파일·네트워크 행동을 실시간으로 지켜봅니다. 이상 신호를 놓치지 않습니다.</p>
+          </article>
+          <article>
+            <div class="num"><b>02</b> / 03</div>
+            <h3>연결</h3>
+            <p>개별 알림이 아니라 행동의 순서를 읽습니다. 진짜 공격과 단순 노이즈를 구분해 줍니다.</p>
+          </article>
+          <article>
+            <div class="num"><b>03</b> / 03</div>
+            <h3>대응</h3>
+            <p>무엇을, 어떤 순서로 처리해야 하는지 권고안을 제시합니다. 실행 전 미리 결과를 확인하는 dry-run 도 지원합니다.</p>
+          </article>
+        </div>
+        <div class="progress"><i><b></b></i><i><b></b></i><i><b></b></i></div>
+      </div>
+
+      <div class="chain-card">
+        <div class="chain-head">공격 경로 재구성<span class="tag">dry-run · 실행 안 됨</span></div>
+        <div class="nodes">
+          <div class="rail"><b id="rail"></b></div>
+          <div class="node"><div class="dot">01</div><div><div class="k">메일 첨부 실행</div><div class="n">outlook.exe → invoice.xlsm</div></div><div class="t">09:12:04</div></div>
+          <div class="node hot"><div class="dot">02</div><div><div class="k">스크립트 실행</div><div class="n">powershell.exe -enc</div></div><div class="t">09:12:09</div></div>
+          <div class="node hot"><div class="dot">03</div><div><div class="k">자격증명 접근</div><div class="n">lsass.exe 메모리 읽기</div></div><div class="t">09:13:41</div></div>
+          <div class="node crit"><div class="dot">04</div><div><div class="k">외부 서버 연결</div><div class="n">185.220.101.47:443</div></div><div class="t">09:14:02</div></div>
+        </div>
+        <div class="advice" id="advice">
+          <small>권고 대응</small>
+          <p><b>host-0472</b> 를 격리하고 스크립트 실행을 차단하세요.</p>
+          <div class="acts"><span class="btn sm">오탐</span><span class="btn sm primary">위협 확정</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 기능 (가로 스크롤) -->
+  <section class="hscroll" id="features">
+    <div class="wrap head">
+      <div class="eyebrow">Features</div>
+      <h2 style="margin-top:14px">판단에 필요한 것만, 명확하게</h2>
+    </div>
+    <div class="track" id="track">
+      <article class="card">
+        <div class="idx">01</div>
+        <h3>실시간 엔드포인트 모니터링</h3>
+        <p>서버·PC·노트북에서 일어나는 활동을 24시간 지켜봅니다. 새로운 위협은 몇 초 안에 화면 위로 올라옵니다.</p>
+        <div class="vis"><div class="vis-bars" id="eq"></div></div>
+      </article>
+      <article class="card">
+        <div class="idx">02</div>
+        <h3>시퀀스 상관분석</h3>
+        <p>개별 알림이 아니라, 행동의 순서를 읽습니다. 진짜 공격과 단순 노이즈를 구분해 줍니다.</p>
+        <div class="vis"><div class="vis-seq"><span>excel</span><em>→</em><span>powershell</span><em>→</em><span>C2</span></div></div>
+      </article>
+      <article class="card">
+        <div class="idx">03</div>
+        <h3>자동 대응 권고</h3>
+        <p>이 호스트를 격리하세요처럼 다음 행동을 그대로 제안합니다. 클릭 한 번으로 확정, 실행 전 미리보기도 가능합니다.</p>
+        <div class="vis"><div class="vis-cmd">$ isolate host-0472 --dry-run<br /><b>✓ 예상 영향: 연결 3개 차단</b> <span class="cur"></span></div></div>
+      </article>
+      <article class="card">
+        <div class="idx">04</div>
+        <h3>읽기 쉬운 리포트</h3>
+        <p>경영진에게 보고할 때도 그대로 쓸 수 있는, 전문 용어를 걷어낸 요약. 무슨 일이 있었고 어떻게 막았는지 한 장으로.</p>
+        <div class="vis"><div class="vis-doc"><i style="width:40%;background:var(--ink-2)"></i><i style="width:92%"></i><i style="width:84%"></i><i style="width:66%"></i></div></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 수치 -->
+  <section class="block wrap">
+    <div class="eyebrow">Coverage</div>
+    <h2 style="margin:14px 0 56px">세 가지 행동을 빠짐없이 봅니다</h2>
+    <div class="stats">
+      <div><b class="count" data-to="11860">0</b><span>24시간 프로세스 실행 이벤트</span></div>
+      <div><b class="count" data-to="4318">0</b><span>파일 생성·수정 이벤트</span></div>
+      <div><b class="count" data-to="2224">0</b><span>네트워크 연결 이벤트</span></div>
+    </div>
+  </section>
+
+  <!-- 마지막 -->
+  <section class="cta" id="start">
+    <div class="wrap">
+      <h2 class="reveal">지금, 판단이 필요한 것부터 보여드립니다</h2>
+      <p class="lead reveal">로그인하면 우리 조직의 엔드포인트가 지금 어떤 상태인지 바로 확인할 수 있습니다.</p>
+      <div class="hero-cta reveal">
+        <a class="btn primary" href="#">로그인<span class="arrow">→</span></a>
+        <a class="btn" href="#">대시보드 둘러보기</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="#top"><img src="logo.png" alt="" />EDRdog</a>
+    <span>엔드포인트 위협을 탐지하고, 판단까지 도와드립니다.</span>
+    <div class="links"><a href="#">이용약관</a><a href="#">개인정보처리방침</a></div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script>
+  // 이벤트 흐름 띠: 같은 목록을 두 번 붙여 끊김 없이 돈다
+  const feed = [
+    ['09:12:04', 'WIN-FIN-02', 'outlook.exe → invoice.xlsm', 'var(--mid)'],
+    ['09:12:09', 'WIN-FIN-02', 'powershell.exe -enc JABzAD0A…', 'var(--high)'],
+    ['09:13:41', 'WIN-DEV-01', 'lsass.exe memory read', 'var(--crit)'],
+    ['09:14:02', 'WIN-FIN-02', 'tcp 185.220.101.47:443', 'var(--crit)'],
+    ['09:14:30', 'WIN-HR-03', 'dns telemetry-sync.io', 'var(--high)'],
+    ['09:15:11', 'WIN-OPS-01', 'net user /add svc_backup', 'var(--high)'],
+    ['09:15:48', 'WIN-OPS-02', 'schtasks /create /tn Updater', 'var(--med)'],
+    ['09:16:02', 'WIN-FIN-01', 'usb copy 1,204 files', 'var(--med)'],
+  ]
+  const row = feed.map(([t, h, e, c]) => `<span><i style="background:${c}"></i>${t}<b style="color:var(--ink-2);font-weight:500">${h}</b>${e}</span>`).join('')
+  document.getElementById('ticker').innerHTML = row + row
+
+  // 실시간 모니터링 카드의 막대
+  document.getElementById('eq').innerHTML = Array.from({ length: 24 }, (_, i) =>
+    `<i style="height:${30 + ((i * 37) % 70)}%;animation-delay:${(i % 6) * -0.27}s${i === 17 ? ';background:var(--crit)' : ''}"></i>`).join('')
+
+  // 문장을 단어로 쪼갠다. *표시* 단어는 강조색
+  const st = document.getElementById('statement')
+  st.innerHTML = st.textContent.split(' ').map((w) =>
+    w.startsWith('*') ? `<span class="w accent">${w.replaceAll('*', '')}</span>` : `<span class="w">${w}</span>`).join(' ')
+
+  // 스크롤에 따라 내비 배경을 깐다
+  const nav = document.getElementById('nav')
+  addEventListener('scroll', () => nav.classList.toggle('solid', scrollY > 20), { passive: true })
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const wide = matchMedia('(min-width: 901px)').matches
+
+  if (reduce || !window.gsap) {
+    // 연출 없이 모두 보이게 둔다
+    document.documentElement.classList.remove('js')
+    document.querySelectorAll('.w').forEach((w) => (w.style.opacity = 1))
+    document.querySelectorAll('.node').forEach((n) => (n.style.opacity = 1))
+    document.getElementById('advice').style.cssText = 'opacity:1;transform:none'
+    document.querySelectorAll('.count').forEach((c) => (c.textContent = (+c.dataset.to).toLocaleString()))
+  } else {
+    gsap.registerPlugin(ScrollTrigger)
+
+    // 히어로: 제목 줄이 아래에서 올라온다
+    gsap.timeline({ defaults: { ease: 'power4.out' } })
+      .from('h1 .line > span', { yPercent: 110, duration: 1.1, stagger: 0.12 })
+      .from('.hero-in', { y: 16, opacity: 0, duration: 0.8, stagger: 0.08 }, '-=0.8')
+      .from('#shot', { y: 60, opacity: 0, duration: 1.2 }, '-=0.7')
+
+    // 제품 화면: 기울어진 상태에서 스크롤하면 펴진다
+    gsap.fromTo('#shot', { rotateX: 22, scale: 0.9 }, {
+      rotateX: 0, scale: 1, ease: 'none',
+      scrollTrigger: { trigger: '.stage', start: 'top 85%', end: 'top 15%', scrub: 0.6 },
+    })
+
+    // 문장: 단어가 차례로 밝아진다
+    gsap.to('.statement .w', {
+      opacity: 1, stagger: 0.1, ease: 'none',
+      scrollTrigger: { trigger: '.statement', start: 'top 70%', end: 'bottom 60%', scrub: 0.4 },
+    })
+
+    // 공격 경로: 화면을 고정하고 단계를 이어 간다
+    if (wide) {
+      const arts = gsap.utils.toArray('.stage-copy article')
+      const nodes = gsap.utils.toArray('.node')
+      const bars = gsap.utils.toArray('.progress b')
+      const tl = gsap.timeline({
+        defaults: { ease: 'none' },
+        scrollTrigger: { trigger: '.chain-sec', start: 'top top', end: '+=2400', pin: true, scrub: 0.6 },
+      })
+      tl.to(bars[0], { scaleX: 1, duration: 1 }, 0)
+        .to(nodes[0], { opacity: 1, duration: 0.3 }, 0.2)
+        .to('#rail', { scaleY: 0.33, duration: 0.8 }, 0.4)
+        .to(nodes[1], { opacity: 1, duration: 0.3 }, 0.9)
+        .to(arts[0], { opacity: 0, y: -20, duration: 0.3 }, 1.1)
+        .fromTo(arts[1], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 }, 1.3)
+        .to(bars[1], { scaleX: 1, duration: 1 }, 1.1)
+        .to('#rail', { scaleY: 1, duration: 0.9 }, 1.3)
+        .to(nodes[2], { opacity: 1, duration: 0.3 }, 1.5)
+        .to(nodes[3], { opacity: 1, duration: 0.3 }, 2.0)
+        .to(arts[1], { opacity: 0, y: -20, duration: 0.3 }, 2.2)
+        .fromTo(arts[2], { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 }, 2.4)
+        .to(bars[2], { scaleX: 1, duration: 0.8 }, 2.2)
+        .to('#advice', { opacity: 1, y: 0, duration: 0.4 }, 2.5)
+        .to({}, { duration: 0.4 })
+
+      // 기능: 세로 스크롤을 가로 이동으로 바꾼다
+      const track = document.getElementById('track')
+      gsap.to(track, {
+        x: () => -(track.scrollWidth - innerWidth + 64), ease: 'none',
+        scrollTrigger: { trigger: '.hscroll', start: 'top top', end: () => '+=' + track.scrollWidth, pin: true, scrub: 0.6, invalidateOnRefresh: true },
+      })
+    } else {
+      gsap.set('.node', { opacity: 1 })
+      gsap.set('#advice', { opacity: 1, y: 0 })
+    }
+
+    // 수치: 화면에 들어오면 0부터 올라간다
+    gsap.utils.toArray('.count').forEach((el) => {
+      const o = { v: 0 }
+      gsap.to(o, {
+        v: +el.dataset.to, duration: 1.6, ease: 'power2.out',
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+        onUpdate: () => (el.textContent = Math.round(o.v).toLocaleString()),
+      })
+    })
+
+    // 마지막 섹션: 차례로 떠오른다
+    ScrollTrigger.batch('.reveal', {
+      start: 'top 85%', once: true,
+      onEnter: (els) => gsap.to(els, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.1 }),
+    })
+
+    // 글꼴이 늦게 들어오면 위치를 다시 잰다
+    document.fonts.ready.then(() => ScrollTrigger.refresh())
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EDRdog · 랜딩 히어로 시안</title>
+<link rel="icon" href="logo.png" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<style>
+  /* 토큰: DESIGN.md 미드나잇 */
+  :root {
+    --bg: #0a0e17; --shell: #0e1320; --panel: #0d121d; --raised: #151c2b; --hover: #1b2335;
+    --line: #1f2838; --line-strong: #2b3549;
+    --ink: #eef2f8; --ink-2: #bfc8d6; --mid: #8592a6; --faint: #5a6579;
+    --accent: #3a72ff; --accent-hi: #5285ff; --accent-ink: #9dbbff;
+    --crit: #f04848; --high: #f7811f; --med: #e5b80b; --good: #2fc471; --low: #5aa2ff;
+    --sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.6; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  ul { list-style: none; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .eyebrow { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); }
+  [hidden] { display: none !important; }
+
+  /* 버튼: 주(알약 파랑), 보조(테두리) */
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: 600 15px var(--sans); cursor: pointer; transition: background-color 160ms, transform 100ms; }
+  .btn:hover { background: var(--hover); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { border-radius: 980px; border-color: var(--accent); background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hi); }
+  .btn.sm { height: 36px; padding: 0 16px; font-size: 13px; }
+  .btn:focus-visible, .switch button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+  .cta { display: flex; gap: 10px; }
+
+  /* 배지 */
+  .badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 980px; font: 600 11px var(--mono); white-space: nowrap; }
+  .badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.crit { color: var(--crit); background: rgba(240,72,72,.12); }
+  .badge.high { color: var(--high); background: rgba(247,129,31,.12); }
+  .badge.med { color: var(--med); background: rgba(229,184,11,.12); }
+  .badge.good { color: var(--good); background: rgba(47,196,113,.12); }
+
+  /* 상단 내비 */
+  .nav { position: fixed; inset: 0 0 auto; z-index: 40; height: 64px; background: linear-gradient(var(--bg) 40%, transparent); display: flex; align-items: center; gap: 36px; padding: 0 40px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+  .logo img { width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--mid); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav .cta { margin-left: auto; }
+
+  /* 시안 전환 탭 */
+  .switch { position: fixed; z-index: 50; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 980px; background: var(--raised); border: 1px solid var(--line-strong); }
+  .switch .lbl { padding: 0 10px 0 12px; font: 600 10px var(--mono); letter-spacing: .14em; color: var(--faint); }
+  .switch button { height: 34px; padding: 0 14px; border: 0; border-radius: 980px; background: transparent; color: var(--ink-2); font: 500 13px var(--sans); cursor: pointer; transition: background-color 160ms, color 160ms; }
+  .switch button:hover { background: var(--hover); }
+  .switch button[aria-selected="true"] { background: var(--accent); color: #fff; }
+  .switch button b { font: 600 11px var(--mono); margin-right: 6px; opacity: .7; }
+
+  /* 단어 등장용 */
+  .w { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .06em; }
+  .w > span { display: inline-block; }
+
+  h1 { font-weight: 700; letter-spacing: -.04em; line-height: 1.12; }
+  .sub { font-size: 18px; color: var(--mid); max-width: 520px; text-wrap: balance; }
+
+  /* ───────── A. 확장 카드 ───────── */
+  .a-hero { position: relative; height: 100vh; }
+  .a-card { position: absolute; inset: 0; overflow: hidden; background: var(--shell); clip-path: inset(76px 24px 24px 24px round 14px); }
+  .a-card canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .a-fade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to top, var(--shell) 8%, rgba(14,19,32,.6) 32%, transparent 55%); }
+  .a-dim { position: absolute; inset: 0; background: var(--bg); opacity: 0; pointer-events: none; }
+  .a-head { position: absolute; left: 64px; right: 64px; bottom: 96px; display: flex; justify-content: space-between; font-size: clamp(36px, 5.2vw, 84px); }
+  .a-more { position: absolute; left: 64px; right: 64px; bottom: 96px; display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; opacity: 0; }
+  .a-tag { position: absolute; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 10px; background: var(--raised); box-shadow: var(--shadow); font-size: 13px; color: var(--ink-2); white-space: nowrap; opacity: 0; transition: opacity 240ms; pointer-events: none; }
+  .a-tag.on { opacity: 1; }
+  .a-tag .host { font: 500 12px var(--mono); color: var(--ink); }
+  .a-ticks { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); display: grid; gap: 7px; }
+  .a-ticks i { display: block; width: 10px; height: 1px; background: var(--faint); transition: background-color 200ms, width 200ms; }
+  .a-ticks i.on { width: 16px; background: var(--ink); }
+  .a-live { position: absolute; left: 64px; top: 104px; display: flex; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--mid); }
+  .a-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--good); animation: ping 2.2s infinite; }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(47,196,113,.5); } 70%, 100% { box-shadow: 0 0 0 8px rgba(47,196,113,0); } }
+
+  /* ───────── B. 단어 회전 ───────── */
+  .b-hero { position: relative; height: 100vh; overflow: hidden; perspective: 1600px; }
+  .b-logs { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; padding: 0 40px; mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); }
+  .b-col { overflow: hidden; }
+  .b-col ul { animation: up var(--d) linear infinite; }
+  @keyframes up { to { transform: translateY(-50%); } }
+  .b-col li { font: 400 12px/2.1 var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 8px; border-left: 2px solid transparent; opacity: .7; transition: color 200ms, background-color 200ms, border-color 200ms; }
+  .b-col li.hit { color: var(--crit); opacity: 1; border-color: var(--crit); background: rgba(240,72,72,.08); }
+  .b-veil { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 52% 46% at 50% 46%, var(--bg) 40%, rgba(10,14,23,.75) 70%, rgba(10,14,23,.35)); }
+  .b-copy { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-56%); text-align: center; display: grid; justify-items: center; gap: 26px; }
+  .b-copy h1 { font-size: clamp(40px, 6vw, 92px); }
+  .slot { display: inline-block; height: 1.12em; overflow: hidden; vertical-align: bottom; color: var(--accent-ink); }
+  .slot-in { display: block; }
+  .slot-in > b { display: block; width: max-content; font-weight: 700; height: 1.12em; }
+  .b-panel { position: absolute; left: 50%; top: 44%; width: min(1040px, 92vw); margin-left: calc(min(1040px, 92vw) / -2); border-radius: 14px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); overflow: hidden; transform: translateY(80vh); transform-origin: 50% 0; }
+  .strip { display: flex; align-items: center; gap: 28px; padding: 14px 18px; border-bottom: 1px solid var(--line); font: 500 12px var(--mono); color: var(--mid); }
+  .strip b { color: var(--ink); font-weight: 600; margin-left: 6px; }
+  .strip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); animation: ping 2.2s infinite; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th { text-align: left; padding: 10px 18px; font: 600 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); background: var(--shell); border-bottom: 1px solid var(--line); }
+  .tbl td { padding: 12px 18px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  .tbl tr td:first-child { box-shadow: inset 2px 0 0 var(--sev, transparent); }
+  .tbl .mono { font-size: 12px; color: var(--ink); }
+
+  /* ───────── C. 증거 체인 ───────── */
+  .c-hero { position: relative; height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: 56px; padding: 64px 64px 0; }
+  .c-hero::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background: linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 64px 64px, linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 64px 64px;
+    mask-image: radial-gradient(70% 60% at 30% 30%, #000, transparent 75%); }
+  .c-top { position: relative; display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .c-top h1 { font-size: clamp(40px, 5.6vw, 84px); margin-top: 18px; }
+  .c-top .sub { margin-bottom: 8px; }
+  .c-meta { position: relative; display: flex; gap: 24px; align-items: center; font: 500 12px var(--mono); color: var(--mid); }
+  .c-meta b { color: var(--ink); font-weight: 600; }
+  .chain { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px; margin-top: 14px; }
+  .c-cell { position: relative; padding: 16px 16px 18px; border-radius: 10px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); overflow: hidden; }
+  .c-cell .n { font: 600 11px var(--mono); color: var(--faint); letter-spacing: .1em; }
+  .c-cell h3 { margin-top: 8px; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .c-cell p { margin-top: 6px; font: 400 12px/1.6 var(--mono); color: var(--mid); word-break: break-all; }
+  .c-cell .t { margin-top: 12px; font: 500 11px var(--mono); color: var(--faint); }
+  .c-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--sev); transform-origin: 0 50%; }
+  .c-link { position: absolute; top: 50%; height: 1px; width: 28px; background: var(--line-strong); transform-origin: 0 50%; }
+  .c-hint { position: relative; font: 500 12px var(--mono); color: var(--faint); }
+
+  /* ───────── D. 수렴 ───────── */
+  .d-hero { position: relative; height: 100vh; overflow: hidden; }
+  .d-hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .d-rule { position: absolute; top: 18%; bottom: 40%; width: 1px; background: linear-gradient(transparent, var(--line-strong) 20%, var(--line-strong) 80%, transparent); }
+  .d-rule span { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font: 600 10px var(--mono); letter-spacing: .12em; color: var(--faint); white-space: nowrap; }
+  .d-alerts { position: absolute; right: 56px; top: 16%; width: 340px; display: grid; gap: 10px; }
+  .d-alerts .lbl { font: 600 10px var(--mono); letter-spacing: .14em; color: var(--faint); margin-bottom: 2px; }
+  .d-card { padding: 12px 14px; border-radius: 10px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); box-shadow: inset 2px 0 0 var(--sev), 0 0 0 1px var(--line); }
+  .d-card .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .d-card .host { font: 500 12px var(--mono); color: var(--ink); }
+  .d-card .time { font: 500 11px var(--mono); color: var(--faint); }
+  .d-card p { margin-top: 6px; font-size: 13px; color: var(--ink-2); }
+  .d-head { position: absolute; left: 64px; bottom: 72px; }
+  .d-head h1 { font-size: clamp(40px, 5.4vw, 84px); }
+  .d-head .count { color: var(--ink-2); }
+  .d-head em { font-style: normal; color: var(--crit); }
+  .d-more { position: absolute; right: 56px; bottom: 76px; display: grid; justify-items: end; gap: 20px; text-align: right; opacity: 0; }
+
+  /* ───────── E. 제품 시연: 카드 안에서 실제 콘솔을 쓰는 장면 ───────── */
+  .e-app { position: absolute; inset: 76px 24px 24px; display: grid; grid-template-columns: 208px 1fr; background: var(--bg); font-size: 13px; overflow: hidden; }
+  .e-side { background: var(--shell); border-right: 1px solid var(--line); }
+  .e-brand { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 16px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 14px; }
+  .e-brand img { width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .e-menu { padding: 12px 10px; display: grid; gap: 2px; }
+  .e-menu h6 { padding: 12px 10px 4px; font: 600 10px var(--mono); letter-spacing: .14em; color: var(--faint); }
+  .e-menu a { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 9px; color: var(--ink-2); font-weight: 500; }
+  .e-menu a svg { width: 15px; height: 15px; stroke: var(--mid); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .e-menu a.on { background: var(--accent); color: #fff; }
+  .e-menu a.on svg { stroke: #fff; }
+  .e-menu .count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 3px; background: rgba(240,72,72,.16); color: var(--crit); font: 600 11px var(--mono); text-align: center; }
+  .e-main { position: relative; display: flex; flex-direction: column; min-width: 0; }
+  .e-top { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+  .e-top .crumb { font: 500 10px var(--mono); color: var(--faint); letter-spacing: .04em; }
+  .e-top b { display: block; font-size: 15px; letter-spacing: -.01em; }
+  .e-search { margin-left: auto; display: flex; align-items: center; gap: 8px; width: 260px; height: 32px; padding: 0 12px; border-radius: 9px; background: var(--raised); color: var(--faint); font-size: 12px; }
+  .e-body { padding: 16px 22px; display: grid; gap: 12px; align-content: start; }
+  .e-strip { display: grid; grid-template-columns: auto repeat(4, 1fr); border-radius: 14px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); overflow: hidden; }
+  .e-strip > div { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-left: 1px solid var(--line); font-size: 12px; color: var(--mid); white-space: nowrap; }
+  .e-strip > div:first-child { border-left: 0; font: 600 11px var(--mono); letter-spacing: .1em; color: var(--ink); }
+  .e-strip .ev { margin-left: auto; font: 600 14px var(--mono); color: var(--ink); }
+  .e-strip .live { width: 7px; height: 7px; border-radius: 50%; background: var(--good); animation: ping 2.2s infinite; }
+  .e-panel { border-radius: 14px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); overflow: hidden; }
+  .e-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+  .e-panel-head span { font: 500 11px var(--mono); color: var(--faint); }
+  .e-panel .tbl tr { transition: background-color 200ms; }
+  .e-panel .tbl tr.sel td { background: var(--raised); }
+  .e-panel .tbl .st { font: 500 12px var(--mono); color: var(--low); }
+  .e-panel .tbl .st.ok { color: var(--good); }
+  .e-drawer { position: absolute; top: 56px; right: 0; bottom: 0; width: min(560px, 52%); padding: 20px 22px; background: var(--panel); border-left: 1px solid var(--line); box-shadow: -12px 0 32px rgba(0,0,0,.25); transform: translateX(104%); display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+  .e-drawer .x { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: var(--mid); background: var(--raised); }
+  .e-drawer .crumb { font: 500 11px var(--mono); color: var(--faint); }
+  .e-drawer h3 { margin-top: 6px; font-size: 20px; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+  .e-meta { display: flex; gap: 18px; font: 500 11px var(--mono); color: var(--mid); }
+  .e-meta b { color: var(--ink); font-weight: 600; }
+  .e-label { font: 600 10px var(--mono); letter-spacing: .14em; color: var(--faint); margin-bottom: 8px; }
+  .e-chain { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .e-step { position: relative; padding: 9px 10px 11px; border-radius: 10px; background: var(--raised); overflow: hidden; opacity: .15; }
+  .e-step .n { font: 600 10px var(--mono); color: var(--faint); }
+  .e-step b { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; line-height: 1.35; }
+  .e-step i { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--sev, transparent); }
+  .e-advice { padding: 12px 14px; border-radius: 10px; background: var(--raised); font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+  .e-advice .mono { color: var(--ink); font-size: 12px; }
+  .e-actions { display: flex; gap: 8px; align-items: center; }
+  .e-actions .btn { height: 38px; padding: 0 16px; font-size: 13px; }
+  .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .e-toast { position: absolute; top: 68px; right: 22px; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--raised); box-shadow: var(--shadow), 0 0 0 1px var(--line-strong); font-size: 13px; color: var(--ink-2); opacity: 0; transform: translateY(-8px); pointer-events: none; }
+  .e-toast .host { font: 500 12px var(--mono); color: var(--ink); }
+  .e-cursor { position: absolute; left: 0; top: 0; z-index: 5; width: 22px; height: 22px; pointer-events: none; transform-origin: 3px 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+  .e-ripple { position: absolute; left: 0; top: 0; z-index: 4; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; border: 1.5px solid var(--accent-ink); opacity: 0; pointer-events: none; }
+  #v-e .a-fade { background: linear-gradient(to top, var(--bg) 6%, rgba(10,14,23,.85) 26%, transparent 48%); }
+
+  /* 다음 섹션 자리 */
+  .after { min-height: 70vh; display: grid; place-content: center; text-align: center; gap: 16px; padding: 120px 32px; }
+  .after p { font-size: clamp(28px, 3.4vw, 48px); font-weight: 700; letter-spacing: -.03em; line-height: 1.3; color: var(--ink-2); }
+
+  @media (max-width: 860px) {
+    .nav-links, .nav .cta .btn:not(.primary) { display: none; }
+    .nav { padding: 0 20px; }
+    .a-head { flex-direction: column; left: 40px; right: 40px; }
+    .a-live { left: 40px; }
+    .d-more { bottom: 96px; }
+    .a-more { flex-direction: column; align-items: flex-start; left: 40px; }
+    .a-ticks, .d-alerts, .d-rule { display: none; }
+    .b-logs { grid-template-columns: repeat(2, 1fr); }
+    .strip { flex-wrap: wrap; gap: 8px 16px; }
+    .tbl th:nth-child(4), .tbl td:nth-child(4), .tbl th:nth-child(5), .tbl td:nth-child(5) { display: none; }
+    .c-hero { height: auto; min-height: 100vh; justify-content: flex-start; padding: 96px 24px 96px; gap: 28px; }
+    .c-cell { padding: 12px 14px 14px; }
+    .c-cell p, .c-cell .t { display: none; }
+    .c-top { flex-direction: column; align-items: flex-start; }
+    .chain { grid-template-columns: 1fr; gap: 10px; }
+    .c-link { display: none; }
+    .d-head { left: 24px; right: 24px; }
+    .d-more { left: 24px; right: auto; justify-items: start; text-align: left; bottom: 24px; }
+    .switch .lbl, .switch button span { display: none; }
+    .e-app { grid-template-columns: 1fr; }
+    .e-side, .e-search, .e-strip > div:nth-child(n+3), .tbl th:nth-child(4), .tbl td:nth-child(4), .tbl th:nth-child(5), .tbl td:nth-child(5) { display: none; }
+    .e-strip { grid-template-columns: auto 1fr; }
+    .e-drawer { width: 100%; }
+    .e-chain { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <a class="logo" href="#"><img src="logo.png" alt="" />EDRdog</a>
+  <nav class="nav-links"><a href="#">기능</a><a href="#">공격 경로</a><a href="#">도입 문의</a></nav>
+  <div class="cta"><a class="btn sm" href="#">로그인</a><a class="btn sm primary" href="#">데모 보기</a></div>
+</header>
+
+<div class="switch" role="tablist" aria-label="히어로 시안">
+  <span class="lbl">시안</span>
+  <button role="tab" data-v="a"><b>A</b><span>확장 카드</span></button>
+  <button role="tab" data-v="b"><b>B</b><span>단어 회전</span></button>
+  <button role="tab" data-v="c"><b>C</b><span>증거 체인</span></button>
+  <button role="tab" data-v="d"><b>D</b><span>수렴</span></button>
+  <button role="tab" data-v="e"><b>E</b><span>제품 시연</span></button>
+</div>
+
+<main>
+  <!-- A. 확장 카드: 토스식 인셋 카드가 스크롤에 화면을 채운다 -->
+  <div class="v" id="v-a" hidden>
+    <section class="a-hero">
+      <div class="a-card">
+        <canvas id="a-cv" aria-hidden="true"></canvas>
+        <div class="a-fade"></div>
+        <div class="a-tag" id="a-tag"><span class="badge crit"><i></i>심각</span><span class="host">web-03</span><span class="msg">인코딩된 PowerShell 실행</span></div>
+        <div class="a-live"><i></i><span>호스트 <b id="a-hosts">0</b>대 수집 중</span></div>
+        <div class="a-dim"></div>
+        <h1 class="a-head">
+          <span class="w"><span>위협 탐지부터</span></span>
+          <span class="w"><span>대응까지</span></span>
+          <span class="w"><span>EDRdog 하나로</span></span>
+        </h1>
+        <div class="a-more">
+          <p class="sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+          <div class="cta"><a class="btn primary" href="#">데모 보기</a><a class="btn" href="#">로그인</a></div>
+        </div>
+        <div class="a-ticks" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- B. 단어 회전: 뒤로 로그가 흐르고 문장 속 단어가 바뀐다 -->
+  <div class="v" id="v-b" hidden>
+    <section class="b-hero">
+      <div class="b-logs" aria-hidden="true"></div>
+      <div class="b-veil"></div>
+      <div class="b-copy">
+        <span class="eyebrow">Endpoint Detection &amp; Response</span>
+        <h1>
+          <span class="w"><span><span class="slot"><span class="slot-in"><b>프로세스</b><b>네트워크 연결</b><b>파일 변경</b><b>로그인 시도</b><b>프로세스</b></span></span> 하나까지</span></span><br />
+          <span class="w"><span>놓치지 않아요</span></span>
+        </h1>
+        <p class="sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+        <div class="cta"><a class="btn primary" href="#">데모 보기</a><a class="btn" href="#">로그인</a></div>
+      </div>
+      <div class="b-panel">
+        <div class="strip"><span class="dot"></span><span>호스트<b>128</b></span><span>오늘 이벤트<b>1,284,310</b></span><span>미처리 경보<b style="color:var(--crit)">3</b></span><span>평균 대응<b>4분 12초</b></span></div>
+        <table class="tbl">
+          <thead><tr><th>심각도</th><th>호스트</th><th>탐지</th><th>규칙</th><th>시각</th></tr></thead>
+          <tbody>
+            <tr style="--sev:var(--crit)"><td><span class="badge crit"><i></i>심각</span></td><td class="mono">web-03</td><td>인코딩된 PowerShell 실행</td><td class="mono">T1059.001</td><td class="mono">14:02:11</td></tr>
+            <tr style="--sev:var(--high)"><td><span class="badge high"><i></i>높음</span></td><td class="mono">pc-hr-14</td><td>자동 실행 레지스트리 등록</td><td class="mono">T1547.001</td><td class="mono">13:58:40</td></tr>
+            <tr style="--sev:var(--med)"><td><span class="badge med"><i></i>보통</span></td><td class="mono">db-02</td><td>평소와 다른 시간대 로그인</td><td class="mono">T1078</td><td class="mono">13:41:02</td></tr>
+            <tr style="--sev:var(--good)"><td><span class="badge good"><i></i>정상</span></td><td class="mono">mail-01</td><td>알려진 업데이트 프로세스</td><td class="mono">-</td><td class="mono">13:40:17</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- C. 증거 체인: 스크롤에 맞춰 공격 흐름이 이어진다 -->
+  <div class="v" id="v-c" hidden>
+    <section class="c-hero">
+      <div class="c-top">
+        <div>
+          <span class="eyebrow">Attack path · INC-2048</span>
+          <h1><span class="w"><span>흩어진 이벤트를</span></span><br /><span class="w"><span>하나의 공격 흐름으로</span></span></h1>
+        </div>
+        <p class="sub">수천 줄의 로그 대신, 무엇이 어떤 순서로 일어났는지 번호 붙은 한 줄로 보여 드립니다.</p>
+      </div>
+      <div>
+        <div class="c-meta"><span>호스트 <b>web-03</b></span><span>경과 <b id="c-clock">T+00:00</b></span><span>단계 <b id="c-step">01</b>/05</span></div>
+        <div class="chain">
+          <div class="c-cell"><div class="n">01 · 초기 침투</div><h3>첨부파일 열람</h3><p>outlook.exe › invoice.docm</p><div class="t">14:02:07</div></div>
+          <div class="c-cell" style="--sev:var(--high)"><div class="n">02 · 실행</div><h3>매크로가 셸 실행</h3><p>winword.exe › powershell -enc JABz…</p><div class="t">14:02:09</div><i class="c-bar"></i></div>
+          <div class="c-cell" style="--sev:var(--high)"><div class="n">03 · 지속성</div><h3>자동 실행 등록</h3><p>HKCU\…\Run › updater.exe</p><div class="t">14:02:11</div><i class="c-bar"></i></div>
+          <div class="c-cell" style="--sev:var(--crit)"><div class="n">04 · 외부 통신</div><h3>C2 서버 연결</h3><p>185.220.101.4:443</p><div class="t">14:02:14</div><i class="c-bar"></i></div>
+          <div class="c-cell" style="--sev:var(--good)"><div class="n">05 · 대응</div><h3>프로세스 종료, 격리</h3><p>kill 4182 › isolate web-03</p><div class="t">14:02:54</div><i class="c-bar"></i></div>
+        </div>
+      </div>
+      <div class="c-hint">스크롤하면 공격 흐름이 이어집니다</div>
+    </section>
+  </div>
+
+  <!-- D. 수렴: 수많은 이벤트가 걸러져 몇 개의 경보만 남는다 -->
+  <div class="v" id="v-d" hidden>
+    <section class="d-hero">
+      <canvas id="d-cv" aria-hidden="true"></canvas>
+      <div class="d-rule" id="d-rule"><span>탐지 규칙 312개</span></div>
+      <div class="d-alerts" id="d-alerts"><div class="lbl">지금 볼 경보</div></div>
+      <div class="d-head">
+        <span class="eyebrow">Today</span>
+        <h1 style="margin-top:16px"><span class="w"><span class="count">하루 <span class="mono" id="d-count">1,284,310</span>건의 이벤트</span></span><br /><span class="w"><span>지금 볼 건 <em>3건</em></span></span></h1>
+      </div>
+      <div class="d-more">
+        <p class="sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+        <div class="cta"><a class="btn primary" href="#">데모 보기</a><a class="btn" href="#">로그인</a></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- E. 제품 시연: 인셋 카드 안에서 경보 확인 → 증거 체인 → 프로세스 종료가 자동으로 재생된다 -->
+  <div class="v" id="v-e" hidden>
+    <section class="a-hero">
+      <div class="a-card">
+        <div class="e-app" id="e-app" aria-hidden="true">
+          <aside class="e-side">
+            <div class="e-brand"><img src="logo.png" alt="" />EDRdog</div>
+            <nav class="e-menu">
+              <a class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>대시보드</a>
+              <h6>TRIAGE</h6>
+              <a><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>위협<span class="count" id="e-count">5</span></a>
+              <a><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/></svg>사건</a>
+              <h6>EVIDENCE</h6>
+              <a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></svg>엔드포인트</a>
+              <a><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>수집 로그</a>
+              <h6>ANALYSIS</h6>
+              <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"/></svg>위협 지도</a>
+              <a><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>IP·도메인 조회</a>
+            </nav>
+          </aside>
+          <div class="e-main">
+            <header class="e-top">
+              <div><div class="crumb">EDRDOG / OVERVIEW</div><b>대시보드</b></div>
+              <div class="e-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>호스트·위협·로그 검색</div>
+            </header>
+            <div class="e-body">
+              <section class="e-strip">
+                <div><span class="live"></span>LIVE SIGNAL</div>
+                <div>24시간 이벤트<span class="ev" id="e-events">18,402</span></div>
+                <div>미판단 위협<span class="ev" id="e-open" style="color:var(--crit)">2</span></div>
+                <div>온라인 엔드포인트<span class="ev">7 / 8</span></div>
+                <div>평균 대응<span class="ev">4분 12초</span></div>
+              </section>
+              <section class="e-panel">
+                <div class="e-panel-head">최근 위협<span>실시간</span></div>
+                <table class="tbl">
+                  <thead><tr><th>심각도</th><th>호스트</th><th>탐지</th><th>규칙</th><th>시각</th><th>상태</th></tr></thead>
+                  <tbody id="e-rows"></tbody>
+                </table>
+              </section>
+            </div>
+            <aside class="e-drawer" id="e-drawer">
+              <span class="x" id="e-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+              <div>
+                <div class="crumb">INC-2048 · web-03</div>
+                <h3><span class="badge crit"><i></i>심각</span>인코딩된 PowerShell 실행</h3>
+              </div>
+              <div class="e-meta"><span>사용자 <b>kim</b></span><span>규칙 <b>T1059.001</b></span><span>처음 탐지 <b>14:02:09</b></span></div>
+              <div>
+                <div class="e-label">EVIDENCE CHAIN</div>
+                <div class="e-chain">
+                  <div class="e-step"><div class="n">01</div><b>첨부파일 열람</b><i></i></div>
+                  <div class="e-step" style="--sev:var(--high)"><div class="n">02</div><b>매크로가 셸 실행</b><i></i></div>
+                  <div class="e-step" style="--sev:var(--high)"><div class="n">03</div><b>자동 실행 등록</b><i></i></div>
+                  <div class="e-step" style="--sev:var(--crit)"><div class="n">04</div><b>C2 서버 연결</b><i></i></div>
+                  <div class="e-step" style="--sev:var(--good)"><div class="n">05</div><b>프로세스 종료</b><i></i></div>
+                </div>
+              </div>
+              <div>
+                <div class="e-label">권고</div>
+                <div class="e-advice"><span class="mono">powershell.exe (PID 4182)</span> 가 외부 서버와 통신 중입니다. 프로세스를 종료하고 호스트를 격리하세요.</div>
+              </div>
+              <div class="e-actions" id="e-actions"></div>
+            </aside>
+            <div class="e-toast" id="e-toast"></div>
+          </div>
+          <div class="e-ripple" id="e-ripple"></div>
+          <svg class="e-cursor" id="e-cursor" viewBox="0 0 22 22"><path d="M3 2l15 7.2-6.4 1.7L8.6 17.6z" fill="#fff" stroke="#0a0e17" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="a-fade"></div>
+        <div class="a-dim"></div>
+        <h1 class="a-head">
+          <span class="w"><span>경보가 뜨면</span></span>
+          <span class="w"><span>원인을 보고</span></span>
+          <span class="w"><span>바로 막아요</span></span>
+        </h1>
+        <div class="a-more">
+          <p class="sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+          <div class="cta"><a class="btn primary" href="#">데모 보기</a><a class="btn" href="#">로그인</a></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="after">
+    <span class="eyebrow">다음 섹션 자리</span>
+    <p>히어로 다음부터는 기존 랜딩 시안의<br />문장 등장, 기능 소개가 이어집니다.</p>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const $ = (s, r = document) => r.querySelector(s)
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)]
+  const rand = (a, b) => a + Math.random() * (b - a)
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
+  gsap.registerPlugin(ScrollTrigger)
+
+  // 시안을 바꿀 때 지울 것들(루프, 타이머, 관찰자)
+  let stops = []
+  let ctx = null
+  const loop = (fn) => {
+    let on = true
+    const tick = (t) => { if (!on) return; fn(t); requestAnimationFrame(tick) }
+    reduce ? fn(performance.now()) : requestAnimationFrame(tick)
+    stops.push(() => (on = false))
+  }
+  const every = (ms, fn) => { if (reduce) return; const id = setInterval(fn, ms); stops.push(() => clearInterval(id)) }
+
+  // canvas 크기를 화면 배율에 맞춘다
+  function fit(cv, onResize) {
+    const s = { g: cv.getContext('2d'), w: 0, h: 0 }
+    const resize = () => {
+      const d = Math.min(devicePixelRatio || 1, 2)
+      s.w = cv.clientWidth; s.h = cv.clientHeight
+      cv.width = s.w * d; cv.height = s.h * d
+      s.g.setTransform(d, 0, 0, d, 0, 0)
+      onResize && onResize(s)
+    }
+    resize()
+    const ro = new ResizeObserver(resize); ro.observe(cv)
+    stops.push(() => ro.disconnect())
+    return s
+  }
+
+  // 큰 문장 단어가 아래에서 올라온다
+  const intro = (root) => gsap.from($$('.w > span', root), { yPercent: 110, duration: 1, stagger: 0.08, ease: 'power4.out' })
+
+  // ───────── A ─────────
+  function initA() {
+    const root = $('#v-a'), tag = $('#a-tag')
+    let nodes = [], edges = [], adj = [], packets = [], inc = null
+    const hostNames = ['web-01', 'web-03', 'db-02', 'pc-hr-14', 'pc-dev-07', 'mail-01', 'vpn-gw', 'pc-fin-02', 'build-01', 'file-01']
+
+    // 화면을 격자로 나눠 호스트를 놓고 가까운 둘과 잇는다
+    const build = ({ w, h }) => {
+      nodes = []; edges = []
+      const cols = Math.max(6, Math.round(w / 120)), rows = Math.max(4, Math.round(h / 120))
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+        if (Math.random() < 0.3) continue
+        nodes.push({ x: (i + 0.5 + rand(-0.3, 0.3)) * w / cols, y: (j + 0.5 + rand(-0.3, 0.3)) * h / rows, label: Math.random() < 0.12 ? pick(hostNames) : null })
+      }
+      adj = nodes.map(() => [])
+      const seen = new Set()
+      nodes.forEach((a, i) => {
+        nodes.map((b, k) => [k, (a.x - b.x) ** 2 + (a.y - b.y) ** 2]).filter(([k]) => k !== i).sort((p, q) => p[1] - q[1]).slice(0, 2).forEach(([k]) => {
+          const key = Math.min(i, k) + '-' + Math.max(i, k)
+          if (seen.has(key)) return
+          seen.add(key); edges.push([i, k]); adj[i].push(k); adj[k].push(i)
+        })
+      })
+      packets = Array.from({ length: 46 }, () => ({ e: Math.floor(Math.random() * edges.length), t: Math.random(), sp: rand(0.004, 0.012), dir: Math.random() < 0.5 }))
+      $('#a-hosts').textContent = nodes.length
+      inc = null
+    }
+    const s = fit($('#a-cv'), build)
+
+    // 위쪽 호스트에서 시작해 3칸 걷는 공격 경로를 만든다
+    const newIncident = (now) => {
+      const top = nodes.map((n, i) => i).filter((i) => nodes[i].y < s.h * 0.58 && nodes[i].y > 140 && adj[i].length)
+      let path = [pick(top)]
+      for (let k = 0; k < 3; k++) {
+        const next = adj[path.at(-1)].filter((n) => !path.includes(n) && nodes[n].y < s.h * 0.58 && nodes[n].y > 150)
+        if (!next.length) break
+        path.push(pick(next))
+      }
+      inc = { path, start: now }
+    }
+
+    const SEG = 450, CONTAIN = 2600, END = 7000
+    loop((now) => {
+      const { g, w, h } = s
+      if (!inc || now - inc.start > END) newIncident(reduce ? now - 3000 : now)
+      const el = now - inc.start, p = inc.path, done = (p.length - 1) * SEG
+      g.clearRect(0, 0, w, h)
+
+      // 연결선과 흐르는 패킷
+      g.strokeStyle = '#1f2838'; g.lineWidth = 1; g.beginPath()
+      edges.forEach(([a, b]) => { g.moveTo(nodes[a].x, nodes[a].y); g.lineTo(nodes[b].x, nodes[b].y) })
+      g.stroke()
+      g.fillStyle = 'rgba(157,187,255,.7)'
+      packets.forEach((k) => {
+        if (!reduce) k.t += k.sp
+        if (k.t > 1) { k.t = 0; k.e = Math.floor(Math.random() * edges.length); k.dir = Math.random() < 0.5 }
+        const [a, b] = k.dir ? edges[k.e] : [...edges[k.e]].reverse()
+        g.fillRect(nodes[a].x + (nodes[b].x - nodes[a].x) * k.t - 1, nodes[a].y + (nodes[b].y - nodes[a].y) * k.t - 1, 2, 2)
+      })
+
+      // 호스트 점과 이름
+      g.font = '10px "JetBrains Mono", monospace'
+      nodes.forEach((n) => {
+        g.fillStyle = '#2b3549'; g.beginPath(); g.arc(n.x, n.y, 2.5, 0, 7); g.fill()
+        if (n.label) { g.fillStyle = '#5a6579'; g.fillText(n.label, n.x + 7, n.y + 3) }
+      })
+
+      // 공격 경로: 주황으로 이어지고 끝 호스트가 빨강, 격리되면 초록
+      const contained = el > done + CONTAIN
+      const fade = Math.max(0, Math.min(1, 1 - (el - 5600) / 900))
+      g.globalAlpha = fade; g.lineWidth = 1.5; g.strokeStyle = '#f7811f'
+      for (let k = 0; k < p.length - 1; k++) {
+        const t = Math.max(0, Math.min(1, (el - k * SEG) / SEG))
+        if (!t) break
+        const a = nodes[p[k]], b = nodes[p[k + 1]]
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t); g.stroke()
+      }
+      p.forEach((i, k) => { if (el > k * SEG) { g.fillStyle = '#f7811f'; g.beginPath(); g.arc(nodes[i].x, nodes[i].y, 3.5, 0, 7); g.fill() } })
+      const T = nodes[p.at(-1)]
+      if (el > done) {
+        const c = contained ? '#2fc471' : '#f04848', f = ((el - done) % 1400) / 1400
+        g.fillStyle = c; g.beginPath(); g.arc(T.x, T.y, 5, 0, 7); g.fill()
+        g.strokeStyle = c; g.globalAlpha = fade * (1 - f); g.beginPath(); g.arc(T.x, T.y, 6 + f * 24, 0, 7); g.stroke()
+      }
+      g.globalAlpha = 1
+
+      // 끝 호스트 옆 경보 꼬리표
+      const show = el > done && el < 6000
+      tag.classList.toggle('on', show)
+      if (show) {
+        const tw = tag.offsetWidth, narrow = w < 700
+        const tx = narrow ? Math.max(16, Math.min(T.x - tw / 2, w - tw - 16)) : Math.min(T.x + 16, w - tw - 40)
+        tag.style.transform = `translate(${tx}px, ${Math.max(100, narrow ? T.y - 56 : T.y - 18)}px)`
+        tag.querySelector('.host').textContent = T.label || 'web-03'
+        tag.querySelector('.badge').className = 'badge ' + (contained ? 'good' : 'crit')
+        tag.querySelector('.badge').lastChild.textContent = contained ? '격리됨' : '심각'
+        tag.querySelector('.msg').textContent = contained ? '프로세스 종료, 네트워크 격리' : '인코딩된 PowerShell 실행'
+      }
+    })
+    tag.style.left = tag.style.top = '0'
+
+    expand(root, 0.45)
+  }
+
+  // 토스식 인셋 카드: 스크롤하면 화면을 꽉 채우고 문장이 올라가며 설명이 뜬다(A, E 공용)
+  function expand(root, dim) {
+    const q = (s) => root.querySelector(s)
+    const full = 'inset(0px 0px 0px 0px round 0px)'
+    if (reduce) { gsap.set(q('.a-card'), { clipPath: full }); gsap.set(q('.a-head'), { opacity: 0 }); gsap.set(q('.a-more'), { opacity: 1 }); return }
+    intro(root)
+    const ticks = [...root.querySelectorAll('.a-ticks i')]
+    gsap.timeline({ scrollTrigger: { trigger: q('.a-hero'), start: 'top top', end: '+=120%', scrub: true, pin: true, invalidateOnRefresh: true,
+      onUpdate: (st) => ticks.forEach((t, i) => t.classList.toggle('on', i === Math.min(ticks.length - 1, Math.floor(st.progress * ticks.length)))) } })
+      .fromTo(q('.a-card'), { clipPath: 'inset(76px 24px 24px 24px round 14px)' }, { clipPath: full, ease: 'none', duration: 1 }, 0)
+      .to(q('.a-dim'), { opacity: dim, ease: 'none', duration: 1 }, 0)
+      .to(q('.a-head'), { y: () => (innerWidth < 860 ? -innerHeight * 0.3 : -150), ease: 'none', duration: 1 }, 0)
+      .fromTo(q('.a-more'), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5 }, 0.5)
+  }
+
+  // ───────── B ─────────
+  function initB() {
+    const root = $('#v-b')
+    const hosts = ['web-01', 'web-03', 'db-02', 'pc-hr-14', 'pc-dev-07', 'mail-01', 'vpn-gw', 'build-01']
+    const kinds = ['proc  svchost.exe > wmiprvse.exe', 'net   10.0.4.12:51022 > 52.84.1.9:443', 'file  C:\\Users\\kim\\Downloads\\invoice.pdf', 'auth  login ok user=kim', 'proc  chrome.exe > chrome.exe', 'reg   HKCU\\Software\\...\\Run set', 'dns   update.microsoft.com', 'proc  explorer.exe > powershell.exe', 'net   10.0.2.8:3389 inbound', 'file  /var/log/auth.log append']
+    const line = () => {
+      const t = [rand(9, 18), rand(0, 59), rand(0, 59)].map((n) => String(Math.floor(n)).padStart(2, '0')).join(':')
+      return `<li>${t}.${String(Math.floor(rand(0, 999))).padStart(3, '0')}  ${pick(hosts).padEnd(9)} ${pick(kinds)}</li>`
+    }
+    // 같은 목록을 두 번 붙여 끊김 없이 흐르게 한다
+    $('.b-logs', root).innerHTML = [62, 48, 56, 44].map((d) => {
+      const items = Array.from({ length: 40 }, line).join('')
+      return `<div class="b-col"><ul style="--d:${d}s">${items}${items}</ul></div>`
+    }).join('')
+    if (reduce) $$('.b-col ul', root).forEach((u) => (u.style.animation = 'none'))
+
+    // 화면 안 로그 한 줄을 심각으로 표시
+    every(1600, () => {
+      const vis = $$('.b-col li', root).filter((li) => { const r = li.getBoundingClientRect(); return r.top > innerHeight * 0.12 && r.bottom < innerHeight * 0.88 })
+      const li = pick(vis); if (!li) return
+      li.classList.add('hit'); setTimeout(() => li.classList.remove('hit'), 1800)
+    })
+
+    // 문장 속 단어 회전(마지막은 첫 단어 복사본이라 처음으로 조용히 돌아간다)
+    const slot = $('.slot', root), inner = $('.slot-in', root), words = $$('b', inner)
+    let i = 0
+    gsap.set(slot, { width: words[0].offsetWidth })
+    every(2200, () => {
+      i++
+      gsap.to(inner, { yPercent: (-100 * i) / words.length, duration: 0.7, ease: 'power3.inOut', onComplete: () => { if (i === words.length - 1) { i = 0; gsap.set(inner, { yPercent: 0 }) } } })
+      gsap.to(slot, { width: words[i].offsetWidth, duration: 0.7, ease: 'power3.inOut' })
+    })
+
+    if (reduce) { gsap.set('.b-panel', { y: 0 }); gsap.set('.b-copy', { opacity: 0 }); return }
+    intro(root)
+    gsap.from('.b-copy .sub, .b-copy .cta, .b-copy .eyebrow', { opacity: 0, y: 14, duration: 0.8, delay: 0.4, stagger: 0.08 })
+    gsap.timeline({ scrollTrigger: { trigger: '.b-hero', start: 'top top', end: '+=110%', scrub: true, pin: true } })
+      .to('.b-copy', { y: '-36vh', scale: 0.72, ease: 'none' }, 0)
+      .to('.b-copy .sub, .b-copy .cta', { opacity: 0, ease: 'none', duration: 0.4 }, 0)
+      .fromTo('.b-panel', { y: '80vh', rotateX: 22 }, { y: '6vh', rotateX: 0, ease: 'none' }, 0)
+      .to('.b-logs', { opacity: 0.3, ease: 'none' }, 0)
+  }
+
+  // ───────── C ─────────
+  function initC() {
+    const root = $('#v-c'), cells = $$('.c-cell', root), bars = $$('.c-bar', root)
+    // 칸 사이 연결선을 그린다
+    const chain = $('.chain', root)
+    $$('.c-link', chain).forEach((l) => l.remove())
+    const links = cells.slice(0, -1).map((c) => { const l = document.createElement('i'); l.className = 'c-link'; chain.appendChild(l); return l })
+    const place = () => links.forEach((l, k) => { l.style.left = cells[k].offsetLeft + cells[k].offsetWidth + 'px' })
+    place(); addEventListener('resize', place); stops.push(() => removeEventListener('resize', place))
+
+    if (reduce) { $('#c-step').textContent = '05'; $('#c-clock').textContent = 'T+00:47'; return }
+    intro(root)
+    gsap.set(cells.slice(1), { opacity: 0.12, y: 10 })
+    gsap.set(links, { scaleX: 0 }); gsap.set(bars, { scaleX: 0 })
+    const tl = gsap.timeline({ scrollTrigger: { trigger: '.c-hero', start: 'top top', end: '+=160%', scrub: 0.6, pin: true,
+      onUpdate: (st) => {
+        $('#c-clock').textContent = 'T+00:' + String(Math.round(st.progress * 47)).padStart(2, '0')
+        $('#c-step').textContent = '0' + Math.min(5, 1 + Math.floor(st.progress * 4.6))
+      } } })
+    cells.slice(1).forEach((c, k) => {
+      tl.to(links[k], { scaleX: 1, duration: 0.4, ease: 'none' })
+        .to(c, { opacity: 1, y: 0, duration: 0.4 })
+        .to(bars[k], { scaleX: 1, duration: 0.3, ease: 'none' })
+    })
+    tl.to('.c-hint', { opacity: 0, duration: 0.2 }, 0)
+  }
+
+  // ───────── D ─────────
+  function initD() {
+    const root = $('#v-d'), list = $('#d-alerts'), rule = $('#d-rule')
+    let parts = []
+    const s = fit($('#d-cv'), ({ w }) => { rule.style.left = w * 0.6 + 'px'; parts = [] })
+
+    // 왼쪽에서 흘러와 깔때기(규칙선)로 모이고, 위험한 것만 오른쪽 경보로 간다
+    loop(() => {
+      const { g, w, h } = s, fx = w * 0.6, cy = h * 0.38, tx = w - 56 - 340
+      const steps = reduce ? 400 : 1
+      for (let n = 0; n < steps; n++) {
+        for (let k = 0; k < 7; k++) parts.push({ x: rand(-40, 0), y0: rand(h * 0.08, h * 0.7), sp: rand(1.4, 3.2) * w / 1400, bad: Math.random() < 0.006 })
+        parts.forEach((p) => (p.x += p.sp * (p.bad && p.x > fx ? 1.6 : 1)))
+        parts = parts.filter((p) => p.x < (p.bad ? tx : fx + 40))
+      }
+      g.clearRect(0, 0, w, h)
+      parts.forEach((p) => {
+        const t = Math.min(1, p.x / fx), e = t * t * (3 - 2 * t)
+        const y = p.y0 + (cy - p.y0) * e
+        if (p.bad) { g.fillStyle = p.x > fx ? '#f04848' : '#f7811f'; g.globalAlpha = 1; g.fillRect(p.x - 1.5, y - 1.5, 3, 3) }
+        else { g.fillStyle = '#8592a6'; g.globalAlpha = 0.22 + 0.3 * e - Math.max(0, (p.x - fx) / 40) * 0.5; g.fillRect(p.x, y, 1.4, 1.4) }
+      })
+      g.globalAlpha = 1
+    })
+
+    // 오른쪽 경보 목록: 새 경보가 위에 쌓이고 3개만 남긴다
+    const pool = [['crit', '심각', 'web-03', '인코딩된 PowerShell 실행'], ['high', '높음', 'pc-hr-14', '자동 실행 레지스트리 등록'], ['crit', '심각', 'db-02', '권한 상승 시도'], ['high', '높음', 'vpn-gw', '짧은 시간 안 로그인 실패 40회'], ['med', '보통', 'pc-dev-07', '서명 없는 드라이버 로드']]
+    let n = 0
+    const add = () => {
+      const [sev, label, host, msg] = pool[n++ % pool.length]
+      const now = new Date(), t = [now.getHours(), now.getMinutes(), now.getSeconds()].map((x) => String(x).padStart(2, '0')).join(':')
+      const el = document.createElement('div')
+      el.className = 'd-card'; el.style.setProperty('--sev', `var(--${sev})`)
+      el.innerHTML = `<div class="row"><span class="badge ${sev}"><i></i>${label}</span><span class="time">${t}</span></div><div class="row" style="margin-top:8px"><span class="host">${host}</span></div><p>${msg}</p>`
+      list.querySelector('.lbl').after(el)
+      if (!reduce) gsap.from(el, { opacity: 0, y: -12, duration: 0.5, ease: 'power3.out' })
+      $$('.d-card', list).slice(3).forEach((x) => x.remove())
+    }
+    list.querySelectorAll('.d-card').forEach((x) => x.remove())
+    add(); add(); add()
+    every(2800, add)
+
+    // 오늘 이벤트 수가 계속 오른다
+    let count = 1284310
+    every(90, () => { count += Math.floor(rand(8, 24)); $('#d-count').textContent = count.toLocaleString('ko-KR') })
+
+    if (reduce) { gsap.set('.d-more', { opacity: 1 }); return }
+    intro(root)
+    gsap.timeline({ scrollTrigger: { trigger: '.d-hero', start: 'top top', end: '+=90%', scrub: true, pin: true } })
+      .to('#d-cv', { opacity: 0.35, ease: 'none' }, 0)
+      .to('.d-head', { y: -110, ease: 'none' }, 0)
+      .fromTo('.d-more', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5 }, 0.4)
+  }
+
+  // ───────── E ─────────
+  function initE() {
+    const root = $('#v-e'), app = $('#e-app'), rows = $('#e-rows'), drawer = $('#e-drawer'), cursor = $('#e-cursor'), ripple = $('#e-ripple'), toast = $('#e-toast'), actions = $('#e-actions')
+    const steps = $$('.e-step', drawer)
+    let alive = true
+    stops.push(() => (alive = false))
+    const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms))
+    const base = [['high', '높음', 'pc-hr-14', '자동 실행 레지스트리 등록', 'T1547.001', '13:58:40', '미판단'], ['med', '보통', 'db-02', '평소와 다른 시간대 로그인', 'T1078', '13:41:02', '미판단'], ['high', '높음', 'vpn-gw', '짧은 시간 로그인 실패 40회', 'T1110', '13:20:11', '조치 완료'], ['good', '정상', 'mail-01', '알려진 업데이트 프로세스', '-', '13:02:57', '조치 완료']]
+    const row = ([sev, label, host, msg, rule, time, st]) => `<tr style="--sev:var(--${sev})"><td><span class="badge ${sev}"><i></i>${label}</span></td><td class="mono">${host}</td><td>${msg}</td><td class="mono">${rule}</td><td class="mono">${time}</td><td class="st ${st === '조치 완료' ? 'ok' : ''}">${st}</td></tr>`
+
+    // 커서를 요소 위로 옮기고 누른다
+    const point = (el, dx = 0.5, dy = 0.5) => { const a = app.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - a.left + r.width * dx, y: r.top - a.top + r.height * dy } }
+    const moveTo = (el, dx, dy) => gsap.to(cursor, { ...point(el, dx, dy), duration: reduce ? 0 : 0.9, ease: 'power2.inOut' })
+    const click = async () => {
+      const x = gsap.getProperty(cursor, 'x'), y = gsap.getProperty(cursor, 'y')
+      gsap.fromTo(ripple, { x, y, scale: 0.3, opacity: 1 }, { scale: 1.3, opacity: 0, duration: 0.5 })
+      await gsap.to(cursor, { scale: 0.8, duration: 0.08, yoyo: true, repeat: 1 })
+    }
+    const say = (html) => gsap.fromTo(toast, { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.35, onStart: () => (toast.innerHTML = html) })
+    const hush = () => gsap.to(toast, { opacity: 0, y: -8, duration: 0.3 })
+    const setNum = (id, v) => ($(id).textContent = v)
+
+    // 처음 화면: 경보 4개, 서랍 닫힘, 커서는 오른쪽 아래
+    const reset = () => {
+      rows.innerHTML = base.map(row).join('')
+      gsap.set(drawer, { x: 0, xPercent: 104 }); gsap.set(steps, { opacity: 0.15, y: 6 }); gsap.set(toast, { opacity: 0 })
+      actions.innerHTML = '<span class="btn primary" id="e-kill">프로세스 종료</span><span class="btn">호스트 격리</span>'
+      setNum('#e-open', 2); setNum('#e-count', 5)
+      const a = app.getBoundingClientRect()
+      gsap.set(cursor, { x: a.width * 0.72, y: a.height * 0.9, scale: 1 })
+    }
+
+    async function play() {
+      reset()
+      await wait(900); if (!alive) return
+      // 1. 새 경보가 맨 위에 들어온다
+      rows.insertAdjacentHTML('afterbegin', row(['crit', '심각', 'web-03', '인코딩된 PowerShell 실행', 'T1059.001', '14:02:09', '미판단']))
+      const tr = rows.firstElementChild
+      gsap.from(tr, { opacity: 0, duration: 0.5 })
+      gsap.fromTo(tr.children, { backgroundColor: 'rgba(240,72,72,.14)' }, { backgroundColor: 'rgba(240,72,72,0)', duration: 1.8, delay: 0.6 })
+      setNum('#e-open', 3); setNum('#e-count', 6)
+      say('<span class="badge crit"><i></i>새 경보</span><span class="host">web-03</span>인코딩된 PowerShell 실행')
+      await wait(1300); if (!alive) return
+      // 2. 경보를 눌러 상세를 연다
+      await moveTo(tr, 0.42, 0.5); if (!alive) return
+      await click(); hush()
+      tr.classList.add('sel')
+      await gsap.to(drawer, { xPercent: 0, duration: reduce ? 0 : 0.55, ease: 'power3.out' })
+      // 3. 증거 체인이 01~04 순서로 켜진다
+      for (const s of steps.slice(0, 4)) { gsap.to(s, { opacity: 1, y: 0, duration: 0.35 }); await wait(320) }
+      await wait(1100); if (!alive) return
+      // 4. 프로세스 종료를 누르고 결과를 받는다
+      const kill = $('#e-kill')
+      await moveTo(kill); if (!alive) return
+      await click()
+      kill.innerHTML = '<i class="spin"></i>종료 요청 중'
+      await wait(1500); if (!alive) return
+      actions.innerHTML = '<span class="badge good"><i></i>종료 완료</span><span class="mono" style="font-size:12px;color:var(--mid)">PID 4182 · 14:02:54</span>'
+      gsap.from(actions, { opacity: 0, y: 6, duration: 0.3 })
+      gsap.to(steps[4], { opacity: 1, y: 0, duration: 0.35 })
+      const st = tr.lastElementChild; st.textContent = '조치 완료'; st.classList.add('ok')
+      setNum('#e-open', 2); setNum('#e-count', 5)
+      say('<span class="badge good"><i></i>조치 완료</span><span class="host">web-03</span>프로세스를 종료했어요')
+      if (reduce) { gsap.set(cursor, { opacity: 0 }); return }
+      await wait(2000); if (!alive) return
+      // 5. 서랍을 닫고 처음부터 다시
+      hush()
+      await moveTo($('#e-close')); if (!alive) return
+      await click()
+      tr.classList.remove('sel')
+      await gsap.to(drawer, { xPercent: 104, duration: 0.45, ease: 'power3.in' })
+      await wait(1600); if (!alive) return
+      await gsap.to(app, { opacity: 0, duration: 0.3 })
+      reset()
+      await gsap.to(app, { opacity: 1, duration: 0.3 })
+      if (alive) play()
+    }
+
+    // 24시간 이벤트 수가 계속 오른다
+    let ev = 18402
+    every(700, () => { ev += Math.floor(rand(1, 6)); setNum('#e-events', ev.toLocaleString('ko-KR')) })
+
+    reset()
+    expand(root, 0.2)
+    play()
+  }
+
+  // ───────── 시안 전환 ─────────
+  const inits = { a: initA, b: initB, c: initC, d: initD, e: initE }
+  function show(v) {
+    stops.forEach((f) => f()); stops = []
+    ctx && ctx.revert()
+    scrollTo(0, 0)
+    $$('.v').forEach((el) => (el.hidden = el.id !== 'v-' + v))
+    $$('.switch button').forEach((b) => b.setAttribute('aria-selected', b.dataset.v === v))
+    history.replaceState(null, '', '#' + v)
+    ctx = gsap.context(inits[v])
+    ScrollTrigger.refresh()
+  }
+  $$('.switch button').forEach((b) => b.addEventListener('click', () => show(b.dataset.v)))
+  addEventListener('keydown', (e) => { const v = { 1: 'a', 2: 'b', 3: 'c', 4: 'd', 5: 'e' }[e.key]; if (v) show(v) })
+  document.fonts.ready.then(() => show(inits[location.hash.slice(1)] ? location.hash.slice(1) : 'e'))
+</script>
+</body>
+</html>

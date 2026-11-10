@@ -1,0 +1,2302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EDRdog · 엔드포인트 위협 탐지·대응</title>
+<link rel="icon" href="logo.png" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<style>
+  /* 토큰: DESIGN.md 미드나잇 */
+  :root {
+    --bg: #0a0e17; --shell: #0e1320; --panel: #0d121d; --raised: #151c2b; --hover: #1b2335;
+    --line: #1f2838; --line-strong: #2b3549;
+    --ink: #eef2f8; --ink-2: #bfc8d6; --mid: #8592a6; --faint: #5a6579;
+    --accent: #3a72ff; --accent-hi: #5285ff; --accent-ink: #9dbbff;
+    --crit: #f04848; --high: #f7811f; --med: #e5b80b; --good: #2fc471; --low: #5aa2ff;
+    --sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  ul { list-style: none; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .eyebrow { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); }
+  .h2 { font-size: clamp(34px, 4.4vw, 60px); font-weight: 700; letter-spacing: -.035em; line-height: 1.18; }
+  .lead { font-size: 18px; color: var(--mid); max-width: 560px; text-wrap: balance; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: 600 15px var(--sans); cursor: pointer; transition: background-color 160ms, transform 100ms; }
+  .btn:hover { background: var(--hover); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { border-radius: 980px; border-color: var(--accent); background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hi); }
+  .btn.sm { height: 36px; padding: 0 16px; font-size: 13px; }
+  .btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 980px; font: 600 11px var(--mono); white-space: nowrap; }
+  .badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.crit { color: var(--crit); background: rgba(240,72,72,.12); }
+  .badge.high { color: var(--high); background: rgba(247,129,31,.12); }
+  .badge.med { color: var(--med); background: rgba(229,184,11,.12); }
+  .badge.good { color: var(--good); background: rgba(47,196,113,.12); }
+  .badge.low { color: var(--low); background: rgba(90,162,255,.12); }
+  /* 카드: 곡률 14px, 옅은 그림자 + 다크에서 윤곽용 1px 선 */
+  .card { border-radius: 14px; background: var(--panel); box-shadow: var(--shadow), 0 0 0 1px var(--line); }
+  .nav { position: fixed; inset: 0 0 auto; z-index: 40; height: 64px; display: flex; align-items: center; gap: 36px; padding: 0 40px; background: linear-gradient(var(--bg) 30%, transparent); }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+  .logo img { width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--mid); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav .cta { margin-left: auto; display: flex; gap: 8px; }
+  @media (max-width: 860px) { .nav-links, .nav .cta .btn:not(.primary) { display: none; } .nav { padding: 0 20px; } .wrap { padding: 0 20px; } }
+</style>
+<script>
+  // 모든 섹션이 함께 쓰는 값
+  window.REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches
+  gsap.registerPlugin(ScrollTrigger)
+</script>
+</head>
+<body>
+<header class="nav">
+  <a class="logo" href="#"><img src="logo.png" alt="" />EDRdog</a>
+  <nav class="nav-links"><a href="#flow">동작 방식</a><a href="#map">위협 지도</a><a href="#features">기능</a></nav>
+  <div class="cta"><a class="btn sm" href="#">로그인</a><a class="btn sm primary" href="#">데모 보기</a></div>
+</header>
+<main>
+<style>
+  /* 히어로: 이벤트 흐름 → 탐지 → 대시보드. 스크롤에 맞춰 세 장면이 이어진다 */
+  .hx-stage { position: relative; height: 100vh; height: 100svh; min-height: 600px; overflow: hidden; background: var(--bg); }
+  .hx-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* 1장: 첫 문장과 버튼 */
+  .hx-intro { position: absolute; inset: 64px 0 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px 48px; text-align: center; pointer-events: none; }
+  .hx-h1 { margin: 22px 0 24px; font-size: clamp(42px, 6.6vw, 96px); font-weight: 700; letter-spacing: -.04em; line-height: 1.1; }
+  .hx-ln { display: block; overflow: hidden; padding: 0 .04em .1em; margin-bottom: -.1em; }
+  .hx-w { display: inline-block; }
+  .hx-sub { max-width: 500px; font-size: 18px; color: var(--mid); text-wrap: balance; }
+  .hx-cta { display: flex; gap: 10px; justify-content: center; margin-top: 36px; pointer-events: auto; }
+
+  /* 2장, 3장 문장: 화면 위쪽에 하나씩 */
+  .hx-head { position: absolute; z-index: 2; left: 0; right: 0; top: 104px; padding: 0 20px; text-align: center; opacity: 0; }
+
+  /* 탐지 게이트 이름표와 카운터 */
+  .hx-gtag { position: absolute; z-index: 2; left: 0; top: 0; display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 12px; border-radius: 980px; background: var(--shell); box-shadow: 0 0 0 1px var(--line-strong); font: 600 11px var(--mono); letter-spacing: .04em; color: var(--accent-ink); white-space: nowrap; opacity: 0; }
+  .hx-gtag i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .hx-count { position: absolute; z-index: 2; left: 50%; bottom: 40px; display: flex; border-radius: 980px; background: var(--shell); box-shadow: 0 0 0 1px var(--line); opacity: 0; white-space: nowrap; }
+  .hx-count div { display: flex; align-items: baseline; gap: 10px; padding: 10px 22px; font-size: 13px; color: var(--mid); }
+  .hx-count div + div { border-left: 1px solid var(--line); }
+  .hx-count b { font: 600 18px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+  .hx-count .hx-m { color: var(--crit); }
+
+  /* 걸러진 위협 조각: 흐름에서 잡혀 대시보드 표로 날아간다 */
+  .hx-chip { position: absolute; z-index: 4; left: 0; top: 0; display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 12px; border-radius: 3px; background: var(--raised); box-shadow: 0 0 0 1px var(--line-strong); font: 500 12px var(--mono); color: var(--ink-2); white-space: nowrap; opacity: 0; transform-origin: 0 0; pointer-events: none; }
+  .hx-chip-k { width: 32px; color: var(--mid); }
+  .hx-chip-v { position: relative; }
+  .hx-chip-t { position: absolute; inset: 0; border-radius: inherit; opacity: 0; }
+  .hx-chip-r { position: relative; font-weight: 600; opacity: 0; }
+  .hx-crit .hx-chip-t { background: rgba(240,72,72,.13); box-shadow: inset 2px 0 0 var(--crit), 0 0 0 1px rgba(240,72,72,.4); }
+  .hx-high .hx-chip-t { background: rgba(247,129,31,.13); box-shadow: inset 2px 0 0 var(--high), 0 0 0 1px rgba(247,129,31,.4); }
+  .hx-med .hx-chip-t { background: rgba(229,184,11,.11); box-shadow: inset 2px 0 0 var(--med), 0 0 0 1px rgba(229,184,11,.36); }
+  .hx-crit .hx-chip-r { color: var(--crit); }
+  .hx-high .hx-chip-r { color: var(--high); }
+  .hx-med .hx-chip-r { color: var(--med); }
+
+  /* 3장: 대시보드 틀 (DESIGN.md 콘솔 규칙을 줄여서 따른다) */
+  .hx-dash { position: absolute; z-index: 3; left: 0; top: 0; width: min(1160px, calc(100% - 96px)); display: grid; grid-template-columns: 200px minmax(0, 1fr); border-radius: 14px; background: var(--bg); box-shadow: var(--shadow), 0 0 0 1px var(--line-strong); overflow: hidden; opacity: 0; transform-origin: 0 0; font-size: 13px; line-height: 1.5; }
+  .hx-d-side { background: var(--shell); border-right: 1px solid var(--line); }
+  .hx-d-brand { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 14px; }
+  .hx-d-brand img { width: 22px; height: 22px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .hx-d-nav { display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; }
+  .hx-d-nav h6 { padding: 12px 10px 4px; font: 600 10px var(--mono); letter-spacing: .14em; color: var(--faint); }
+  .hx-d-nav span { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 9px; color: var(--ink-2); font-weight: 500; }
+  .hx-d-nav svg { width: 15px; height: 15px; fill: none; stroke: var(--mid); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .hx-d-nav .hx-on { background: var(--accent); color: #fff; }
+  .hx-d-nav .hx-on svg { stroke: #fff; }
+  .hx-d-nav em { margin-left: auto; padding: 0 6px; border-radius: 3px; background: rgba(240,72,72,.16); color: var(--crit); font: 600 11px var(--mono); font-style: normal; }
+  .hx-d-main { min-width: 0; }
+  .hx-d-top { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+  .hx-d-top small { display: block; font: 500 10px var(--mono); letter-spacing: .04em; color: var(--faint); }
+  .hx-d-top b { display: block; font-size: 14px; line-height: 1.2; }
+  .hx-d-search { margin-left: auto; display: flex; align-items: center; width: 220px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-strong); color: var(--faint); font-size: 12px; }
+  .hx-d-body { display: grid; gap: 12px; padding: 16px 20px 20px; }
+  .hx-d-strip { display: grid; grid-template-columns: auto repeat(4, 1fr); }
+  .hx-d-strip > div { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-left: 1px solid var(--line); font-size: 12px; color: var(--mid); }
+  .hx-d-strip > div:first-child { border-left: 0; font: 600 10px var(--mono); letter-spacing: .1em; color: var(--ink-2); }
+  .hx-d-strip b { margin-left: auto; font: 600 13px var(--mono); color: var(--ink); }
+  .hx-live { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+  .hx-live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--good); animation: hx-ring 2.2s ease-out infinite; }
+  @keyframes hx-ring { from { transform: scale(1); opacity: .9; } to { transform: scale(3); opacity: 0; } }
+  .hx-d-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .hx-d-kpi { padding: 14px 16px; }
+  .hx-d-kpi span { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .hx-d-kpi b { display: block; margin: 8px 0 2px; font: 600 28px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+  .hx-d-kpi b small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--faint); }
+  .hx-d-kpi p { font-size: 11px; color: var(--mid); }
+  .hx-d-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; }
+  .hx-d-ph { display: flex; align-items: center; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  .hx-d-ph b { font-size: 13px; }
+  .hx-d-ph span { margin-left: auto; font: 500 10px var(--mono); color: var(--faint); }
+  .hx-d-th, .hx-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px 64px 64px; gap: 12px; align-items: center; padding: 0 16px; }
+  .hx-d-th { height: 30px; background: var(--shell); border-bottom: 1px solid var(--line); font: 600 10px var(--mono); letter-spacing: .1em; color: var(--faint); }
+  .hx-d-th span:last-child, .hx-row-d { text-align: right; }
+  .hx-row { position: relative; height: 46px; border-bottom: 1px solid var(--line); }
+  .hx-row:last-child { border-bottom: 0; }
+  .hx-row-ph { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+  .hx-row-ph i { height: 7px; border-radius: 3px; background: var(--raised); }
+  .hx-row-c { display: contents; }
+  .hx-row-c > * { opacity: 0; }
+  .hx-row-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; opacity: 0; }
+  .hx-crit .hx-row-bar { background: var(--crit); }
+  .hx-high .hx-row-bar { background: var(--high); }
+  .hx-med .hx-row-bar { background: var(--med); }
+  .hx-row-t { min-width: 0; line-height: 1.3; }
+  .hx-row-t b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hx-row-t code { font: 400 10.5px var(--mono); color: var(--faint); }
+  .hx-row-h { font: 500 12px var(--mono); color: var(--ink-2); }
+  .hx-row-d { font: 500 11px var(--mono); color: var(--mid); }
+  .hx-d-chart { display: flex; flex-direction: column; }
+  .hx-d-plot { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: minmax(0, 1fr); gap: 14px; min-height: 150px; margin: 16px 16px 0; background: repeating-linear-gradient(to top, var(--line) 0 1px, transparent 1px 36px); }
+  .hx-col { display: flex; flex-direction: column-reverse; height: 100%; transform: scaleY(0); transform-origin: bottom; }
+  .hx-col i { display: block; width: 100%; max-width: 26px; margin: 0 auto; border-top: 2px solid var(--panel); }
+  .hx-col i:first-child { border-top: 0; }
+  .hx-d-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; margin: 6px 16px 0; font: 500 10px var(--mono); color: var(--faint); text-align: center; }
+  .hx-d-days span:last-child { color: var(--ink); }
+  .hx-d-legend { display: flex; gap: 14px; padding: 12px 16px 14px; font-size: 11px; color: var(--mid); }
+  .hx-d-legend i { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; }
+
+  @media (max-width: 860px) {
+    .hx-h1 { margin: 18px 0 18px; }
+    .hx-sub { font-size: 15px; }
+    .hx-cta { margin-top: 28px; }
+    .hx-head { top: 86px; }
+    .hx-count { bottom: 28px; }
+    .hx-count div { padding: 9px 14px; font-size: 12px; gap: 8px; }
+    .hx-count b { font-size: 15px; }
+    .hx-chip { height: 26px; gap: 8px; padding: 0 10px; font-size: 10.5px; }
+    .hx-chip-k { width: 28px; }
+    .hx-chip-v { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+    .hx-dash { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); }
+    .hx-d-side, .hx-d-search, .hx-d-strip, .hx-d-th, .hx-row-h, .hx-row-d, .hx-d-legend { display: none; }
+    .hx-d-top { height: 44px; padding: 0 14px; }
+    .hx-d-body { gap: 8px; padding: 10px; }
+    .hx-d-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hx-d-kpi { padding: 10px 12px; }
+    .hx-d-kpi b { margin: 4px 0 0; font-size: 22px; }
+    .hx-d-kpi p { display: none; }
+    .hx-d-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .hx-d-ph { height: 36px; padding: 0 12px; }
+    .hx-row { grid-template-columns: minmax(0, 1fr) auto; height: 42px; padding: 0 12px; }
+    .hx-row-ph { padding: 0 12px; }
+    .hx-d-plot { min-height: 64px; margin: 10px 12px 0; gap: 10px; background-size: 100% 22px; }
+    .hx-d-days { margin: 4px 12px 10px; gap: 10px; }
+  }
+  /* 움직임 줄이기: 고정 없이 마지막 대시보드와 모든 문장을 차례로 보여준다 */
+  .hx-static { height: auto; min-height: 0; padding: 140px 0 72px; }
+  .hx-static .hx-cv { height: 100vh; bottom: auto; }
+  .hx-static .hx-intro, .hx-static .hx-head, .hx-static .hx-dash { position: relative; inset: auto; top: auto; opacity: 1 !important; transform: none !important; }
+  .hx-static .hx-intro { padding-bottom: 72px; }
+  .hx-static .hx-head { margin-bottom: 14px; }
+  .hx-static .hx-dash { margin: 32px auto 0; }
+  .hx-static .hx-chip, .hx-static .hx-gtag, .hx-static .hx-count { display: none; }
+  @media (prefers-reduced-motion: reduce) { .hx-live::after { animation: none; } }
+</style>
+
+<section id="hero" class="hx" aria-label="EDRdog 소개">
+  <div class="hx-stage">
+    <canvas class="hx-cv" aria-hidden="true"></canvas>
+
+    <div class="hx-intro">
+      <p class="eyebrow hx-eb">ENDPOINT DETECTION &amp; RESPONSE</p>
+      <h1 class="hx-h1"><span class="hx-ln"><span class="hx-w">수많은</span> <span class="hx-w">이벤트</span> <span class="hx-w">속에서</span></span></h1>
+      <p class="hx-sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
+      <div class="hx-cta"><a class="btn primary" href="#">데모 보기</a><a class="btn" href="#">로그인</a></div>
+    </div>
+
+    <p class="h2 hx-head hx-head2">위협만 골라내고</p>
+    <p class="h2 hx-head hx-head3">한 화면에 정리합니다</p>
+
+    <div class="hx-gtag" aria-hidden="true"><i></i>탐지 규칙 312개</div>
+    <div class="hx-count" aria-hidden="true">
+      <div>들어온 이벤트 <b id="hx-n">18,240</b></div>
+      <div>걸러낸 위협 <b class="hx-m" id="hx-m">0</b></div>
+    </div>
+
+    <div class="hx-dash" aria-hidden="true">
+      <aside class="hx-d-side hx-dp">
+        <div class="hx-d-brand"><img src="logo.png" alt="" />EDRdog</div>
+        <div class="hx-d-nav">
+          <span class="hx-on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>대시보드</span>
+          <h6>TRIAGE</h6>
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>위협<em>5</em></span>
+          <span><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/></svg>사건</span>
+          <h6>EVIDENCE</h6>
+          <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></svg>엔드포인트</span>
+          <span><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>수집 로그</span>
+          <h6>ANALYSIS</h6>
+          <span><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 8 11 16M16.5 8 13 16"/></svg>관계 분석</span>
+        </div>
+      </aside>
+      <div class="hx-d-main">
+        <header class="hx-d-top hx-dp"><div><small>EDRDOG / OVERVIEW</small><b>대시보드</b></div><span class="hx-d-search">호스트·위협·로그 검색</span></header>
+        <div class="hx-d-body">
+          <div class="card hx-d-strip hx-dp">
+            <div><span class="hx-live"></span>LIVE SIGNAL</div>
+            <div>24시간 수집 이벤트<b class="hx-kv" data-live="1">0</b></div>
+            <div>탐지 규칙<b>312</b></div>
+            <div>규칙 적중<b class="hx-kv" data-to="5">0</b></div>
+            <div>온라인 엔드포인트<b>126 / 128</b></div>
+          </div>
+          <div class="hx-d-kpis">
+            <div class="card hx-d-kpi hx-dp"><span>미판단 위협</span><b class="hx-kv" data-to="5">0</b><p>판단을 기다리는 위협</p></div>
+            <div class="card hx-d-kpi hx-dp"><span>심각 위협</span><b class="hx-kv" data-to="2" style="color:var(--crit)">0</b><p>즉시 조치가 필요한 항목</p></div>
+            <div class="card hx-d-kpi hx-dp"><span>위험 엔드포인트</span><b style="color:var(--high)"><span class="hx-kv" data-to="3" style="display:inline;font:inherit;color:inherit">0</span><small> / 128</small></b><p>위험 등급 호스트</p></div>
+            <div class="card hx-d-kpi hx-dp"><span>오늘 들어온 이벤트</span><b class="hx-kv" data-live="1">0</b><p>모든 엔드포인트 합계</p></div>
+          </div>
+          <div class="hx-d-grid">
+            <div class="card hx-dp">
+              <div class="hx-d-ph"><b>최근 탐지된 위협</b><span>실시간</span></div>
+              <div class="hx-d-th"><span>THREAT</span><span>HOST</span><span>SEV</span><span>TIME</span></div>
+              <div class="hx-rows">
+                <div class="hx-row hx-crit"><div class="hx-row-ph"><i style="width:38%"></i><i style="width:14%;margin-left:auto"></i></div><div class="hx-row-c"><i class="hx-row-bar"></i><div class="hx-row-t"><b>문서 대량 암호화 시도</b><code>T1486 · ransomware_mass_encrypt</code></div><span class="hx-row-h">WIN-FIN-02</span><span><span class="badge crit"><i></i>심각</span></span><span class="hx-row-d">02:53:54</span></div></div>
+                <div class="hx-row hx-crit"><div class="hx-row-ph"><i style="width:30%"></i><i style="width:14%;margin-left:auto"></i></div><div class="hx-row-c"><i class="hx-row-bar"></i><div class="hx-row-t"><b>LSASS 메모리 접근</b><code>T1003.001 · lsass_memory_access</code></div><span class="hx-row-h">WIN-DEV-01</span><span><span class="badge crit"><i></i>심각</span></span><span class="hx-row-d">02:17:54</span></div></div>
+                <div class="hx-row hx-high"><div class="hx-row-ph"><i style="width:42%"></i><i style="width:14%;margin-left:auto"></i></div><div class="hx-row-c"><i class="hx-row-bar"></i><div class="hx-row-t"><b>인코딩된 PowerShell 명령 실행</b><code>T1059.001 · powershell_encoded_command</code></div><span class="hx-row-h">WIN-HR-03</span><span><span class="badge high"><i></i>높음</span></span><span class="hx-row-d">01:06:18</span></div></div>
+                <div class="hx-row hx-high"><div class="hx-row-ph"><i style="width:34%"></i><i style="width:14%;margin-left:auto"></i></div><div class="hx-row-c"><i class="hx-row-bar"></i><div class="hx-row-t"><b>시작 프로그램 무단 등록</b><code>T1547.001 · registry_run_key</code></div><span class="hx-row-h">WIN-HR-03</span><span><span class="badge high"><i></i>높음</span></span><span class="hx-row-d">00:41:07</span></div></div>
+                <div class="hx-row hx-med"><div class="hx-row-ph"><i style="width:28%"></i><i style="width:14%;margin-left:auto"></i></div><div class="hx-row-c"><i class="hx-row-bar"></i><div class="hx-row-t"><b>비정상 시간대 로그인</b><code>T1078 · off_hours_login</code></div><span class="hx-row-h">SRV-DB-01</span><span><span class="badge med"><i></i>보통</span></span><span class="hx-row-d">00:12:30</span></div></div>
+              </div>
+            </div>
+            <div class="card hx-d-chart hx-dp">
+              <div class="hx-d-ph"><b>심각도별 탐지</b><span>최근 7일</span></div>
+              <div class="hx-d-plot"></div>
+              <div class="hx-d-days"><span>11/5</span><span>11/6</span><span>11/7</span><span>11/8</span><span>11/9</span><span>11/10</span><span>오늘</span></div>
+              <div class="hx-d-legend"><span><i style="background:var(--crit)"></i>심각</span><span><i style="background:var(--high)"></i>높음</span><span><i style="background:var(--med)"></i>보통</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hx-chip hx-crit" aria-hidden="true"><i class="hx-chip-t"></i><span class="hx-chip-k">file</span><span class="hx-chip-v">x214 .docx › .locked</span><span class="hx-chip-r">T1486</span></div>
+    <div class="hx-chip hx-crit" aria-hidden="true"><i class="hx-chip-t"></i><span class="hx-chip-k">proc</span><span class="hx-chip-v">rundll32.exe comsvcs.dll MiniDump</span><span class="hx-chip-r">T1003.001</span></div>
+    <div class="hx-chip hx-high" aria-hidden="true"><i class="hx-chip-t"></i><span class="hx-chip-k">proc</span><span class="hx-chip-v">powershell.exe -enc JABzAD0A…</span><span class="hx-chip-r">T1059.001</span></div>
+    <div class="hx-chip hx-high" aria-hidden="true"><i class="hx-chip-t"></i><span class="hx-chip-k">reg</span><span class="hx-chip-v">HKCU\…\Run\updater</span><span class="hx-chip-r">T1547.001</span></div>
+    <div class="hx-chip hx-med" aria-hidden="true"><i class="hx-chip-t"></i><span class="hx-chip-k">auth</span><span class="hx-chip-v">login svc_backup 00:12</span><span class="hx-chip-r">T1078</span></div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const root = document.getElementById('hero')
+  const stage = root.querySelector('.hx-stage')
+  const $ = (s) => root.querySelector(s)
+  const $$ = (s) => [...root.querySelectorAll(s)]
+  const cv = $('.hx-cv')
+  const ctx = cv.getContext('2d', { alpha: false })
+  const intro = $('.hx-intro'), head2 = $('.hx-head2'), head3 = $('.hx-head3')
+  const gtag = $('.hx-gtag'), count = $('.hx-count'), nEl = $('#hx-n'), mEl = $('#hx-m')
+  const dash = $('.hx-dash'), parts = $$('.hx-dp'), rows = $$('.hx-row'), chips = $$('.hx-chip'), kvs = $$('.hx-kv')
+  const plot = $('.hx-d-plot')
+  const REDUCE = window.REDUCE
+  const rnd = Math.random
+  const clamp = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
+  const seg = (p, a, b) => clamp((p - a) / (b - a))
+  const out3 = (t) => 1 - (1 - t) ** 3
+  const io3 = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
+  const fmt = (n) => n.toLocaleString('en-US')
+  const put = (el, x, y, s, o) => { el.style.transform = `translate3d(${x}px,${y}px,0)` + (s !== 1 ? ` scale(${s})` : ''); el.style.opacity = o }
+
+  // 7일 추이 막대: 심각, 높음, 보통 순으로 쌓는다 (오늘 = 걸러낸 5건)
+  const DAYS = [[0, 1, 2], [0, 0, 1], [1, 1, 0], [0, 2, 1], [0, 1, 1], [1, 1, 2], [2, 2, 1]]
+  DAYS.forEach((d) => {
+    const col = document.createElement('div')
+    col.className = 'hx-col'
+    d.forEach((n, i) => { if (n) col.insertAdjacentHTML('beforeend', `<i style="height:${n * 20}%;background:var(${['--crit', '--high', '--med'][i]})"></i>`) })
+    plot.append(col)
+  })
+  const cols = $$('.hx-col')
+
+  // 흐르는 이벤트 문구 (종류, 내용)
+  const EV = [
+    ['proc', 'powershell.exe -enc JABzAD0A…'], ['proc', 'svchost.exe -k netsvcs'], ['proc', 'chrome.exe --type=renderer'], ['proc', 'cmd.exe /c whoami'],
+    ['proc', 'excel.exe /e -embedding'], ['proc', 'rundll32.exe shell32.dll'], ['proc', 'python3 sync.py --all'], ['proc', 'sshd -D'], ['proc', 'node server.js'],
+    ['net', '10.0.4.12 › 185.220.101.4:443'], ['net', '10.0.2.31 › 52.84.12.7:443'], ['net', '10.0.8.5 › 10.0.8.1:53'], ['net', '10.0.3.44 › 142.250.196.110:443'],
+    ['net', '10.0.4.12 › 10.0.4.20:445'], ['net', '10.0.6.9 › 13.107.42.14:443'],
+    ['file', 'invoice.docm'], ['file', 'C:\\Users\\kim\\Downloads\\setup.exe'], ['file', 'report_q3.xlsx'], ['file', '/var/log/auth.log'], ['file', '~/.ssh/known_hosts'], ['file', 'payroll_2026.pdf'],
+    ['reg', 'HKCU\\…\\Run\\updater'], ['reg', 'HKLM\\SYSTEM\\…\\Services'], ['reg', 'HKCU\\…\\RecentDocs'],
+    ['auth', 'login kim'], ['auth', 'login svc_backup'], ['auth', 'sudo -u root'], ['auth', 'logout lee'], ['auth', 'kerberos tgt park'],
+    ['dns', 'update.msedge.net'], ['dns', 'api.github.com'], ['dns', 'x7k2.duckdns.org'], ['dns', 'cdn.jsdelivr.net'],
+  ]
+  const RULE = { proc: 'T1059.001', net: 'T1071.001', file: 'T1486', reg: 'T1547.001', auth: 'T1078', dns: 'T1568' }
+  const SEV = [['240,72,72', '#f04848'], ['247,129,31', '#f7811f'], ['229,184,11', '#e5b80b']]
+
+  const small = innerWidth < 860
+  const NDOT = small ? 340 : 1000, SPEED = small ? 150 : 330
+  const LANES = small ? 15 : 30, PER = small ? 2 : 3
+  let W = 1, H = 1, dpr = 1, Gx = 0, b1 = [0, 1], b2 = [0, 1], dx = 0, dy = 0, ds = 1, gw = 0, scrimY = 0, scrimRy = 1
+  const eb = $('.hx-eb'), sub = $('.hx-sub'), cta = $('.hx-cta'), words = $$('.hx-w')
+
+  // 문구 조각을 미리 그려 둔다. 멀수록 어두운 색 3단계 (불투명이라 겹쳐도 글자가 섞이지 않는다)
+  const TIER = [['#0d121d', '#1f2838', '#2b3549', '#5a6579'], ['#0e1320', '#1f2838', '#5a6579', '#8592a6'], ['#151c2b', '#2b3549', '#8592a6', '#bfc8d6']]
+  let sprites = [], hot = new Map(), SS = 2
+  function chipSprite(k, v, tier, sev) {
+    const c = document.createElement('canvas'), g = c.getContext('2d')
+    const fs = (small ? 10.5 : 12) * SS, pad = 9 * SS, gap = 8 * SS, h = Math.round((small ? 20 : 24) * SS)
+    const font = `500 ${fs}px 'JetBrains Mono', ui-monospace, monospace`
+    g.font = font
+    const kw = g.measureText('file').width, vw = g.measureText(v).width
+    const rule = sev == null ? '' : RULE[k], rw = rule ? g.measureText(rule).width + gap : 0
+    c.width = Math.ceil(pad * 2 + kw + gap + vw + rw); c.height = h
+    const [bg, line, kc, vc] = TIER[tier]
+    g.font = font; g.textBaseline = 'middle'
+    g.beginPath(); g.roundRect(SS * 0.5, SS * 0.5, c.width - SS, h - SS, 3 * SS)
+    g.fillStyle = bg; g.fill()
+    if (sev != null) { g.fillStyle = `rgba(${SEV[sev][0]},.16)`; g.fill() }
+    g.lineWidth = SS; g.strokeStyle = sev == null ? line : `rgba(${SEV[sev][0]},.45)`; g.stroke()
+    if (sev != null) { g.fillStyle = SEV[sev][1]; g.fillRect(SS * 0.5, SS * 0.5, 2 * SS, h - SS) }
+    g.fillStyle = kc; g.fillText(k, pad, h / 2)
+    g.fillStyle = sev == null ? vc : '#eef2f8'; g.fillText(v, pad + kw + gap, h / 2)
+    if (rule) { g.fillStyle = SEV[sev][1]; g.fillText(rule, pad + kw + gap + vw + gap, h / 2) }
+    return { c, w: c.width / SS, h: h / SS }
+  }
+  function buildSprites() {
+    SS = Math.min(devicePixelRatio || 1, 2) * 1.25
+    sprites = [0, 1, 2].map((t) => EV.map(([k, v]) => chipSprite(k, v, t)))
+    hot = new Map()
+  }
+  const hotSprite = (i, sev) => {
+    const key = i * 3 + sev
+    if (!hot.has(key)) hot.set(key, chipSprite(EV[i][0], EV[i][1], 2, sev))
+    return hot.get(key)
+  }
+
+  // 입자: 빛줄기 점(dot)과 차선을 따라 흐르는 글자 조각(chip). z 가 클수록 가깝고 크고 빠르다
+  const mk = (chip) => ({ chip, z: rnd(), u: 0, x: 0, y: 0, v: 0, st: 0, t: 0, vy: 0, s: 0, sev: 0, w: 200 })
+  const P = []
+  for (let i = 0; i < NDOT; i++) P.push(mk(false))
+  // 같은 차선의 조각은 같은 속도라 서로 겹치지 않는다
+  const lanes = Array.from({ length: LANES }, (_, i) => {
+    const z = rnd()
+    return { u: (i + 0.5 + (rnd() - 0.5) * 0.5) / LANES, z, v: SPEED * (0.4 + z) * (0.9 + rnd() * 0.2), list: [] }
+  })
+  const C = []
+  for (const ln of lanes) for (let j = 0; j < PER; j++) { const p = mk(true); p.ln = ln; p.z = ln.z; ln.list.push(p); C.push(p) }
+  C.sort((a, b) => a.z - b.z)
+  const chipScale = (z) => 0.62 + 0.5 * z
+  const tierOf = (z) => (z < 0.38 ? 0 : z < 0.72 ? 1 : 2)
+  function reset(p, x) {
+    p.x = x; p.st = 0; p.t = 0; p.vy = 0
+    if (!p.chip) { p.u = rnd(); p.v = SPEED * (0.4 + p.z) * (0.85 + rnd() * 0.3); return }
+    p.u = p.ln.u; p.v = p.ln.v
+    p.s = (rnd() * EV.length) | 0
+    p.w = sprites.length ? sprites[0][p.s].w * chipScale(p.z) : 200
+  }
+  // 조각은 같은 차선 맨 뒤 조각 뒤에 붙여 다시 흘려보낸다
+  function respawn(p) {
+    if (!p.chip) return reset(p, -30 - rnd() * W * 0.25)
+    let left = W
+    for (const q of p.ln.list) if (q !== p && q.st === 0) left = Math.min(left, q.x - q.w)
+    reset(p, 0)
+    p.x = Math.min(-20, left - 36 - rnd() * 160)
+  }
+  // 처음 배치: 차선마다 화면 안팎에 조각을 띄엄띄엄 놓는다
+  function placeChips() {
+    for (const ln of lanes) {
+      let x = rnd() * W * 1.3
+      for (const p of ln.list) { reset(p, x); x -= p.w + 36 + rnd() * 200 }
+    }
+  }
+
+  // 화면 크기에 맞춰 자리 계산
+  const off = (el, top) => { let x = 0, y = 0; while (el && el !== top) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent } return [x, y] }
+  function layout() {
+    W = stage.clientWidth; H = cv.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2)
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr)
+    const sm = W < 860
+    Gx = sm ? W * 0.62 : W * 0.5
+    b1 = [76, H - 24]
+    b2 = sm ? [200, H * 0.56] : [244, H - 136]
+    gw = gtag.offsetWidth
+    // 1장 문장 덩어리의 가운데와 높이 (바탕색 눌러 주기용)
+    const t0 = eb.offsetTop, t1 = cta.offsetTop + cta.offsetHeight
+    scrimY = intro.offsetTop + (t0 + t1) / 2
+    scrimRy = Math.max(Math.min(H * 0.32, 300), (t1 - t0) * 0.8)
+    const cy2 = (b2[0] + b2[1]) / 2
+    // 대시보드: 3장 문장 아래, 높이가 모자라면 줄인다
+    const dw = dash.offsetWidth, dh = dash.offsetHeight
+    const top = sm ? 140 : 200, avail = H - top - (sm ? 14 : 28)
+    ds = Math.min(1, avail / dh)
+    dx = (W - dw * ds) / 2
+    dy = top + Math.max(0, (avail - dh * ds) * 0.35)
+    // 조각마다 출발 차선, 잠시 머무는 자리, 도착할 표 행
+    chips.forEach((c, k) => {
+      const w = c.offsetWidth, h = c.offsetHeight
+      const lane = cy2 + (k - 2) * (sm ? 18 : 26) - h / 2
+      c._a = [Gx - w - 14, lane]
+      c._b = [Gx - w - 14 + Math.min(w * 0.55, 150) + 28, lane]
+      c._s = sm ? [16, b2[1] + 26 + k * (h + 8)] : [Gx + 64, cy2 - 2.5 * (h + 14) + 7 + k * (h + 14)]
+      const o = off(rows[k], dash), rh = rows[k].offsetHeight
+      c._r = [dx + (o[0] + (sm ? 12 : 16)) * ds, dy + (o[1] + rh / 2) * ds - (h * ds) / 2]
+    })
+    // 처음 한 번만 입자를 화면에 흩어 둔다 (모바일 주소창 resize 때 튀지 않게)
+    if (!placed) { placed = true; for (const p of P) reset(p, rnd() * (W + 200) - 100); placeChips() }
+  }
+  let placed = false
+
+  // 스크롤 진행도 p (0~1) 에 따라 화면 요소 배치. 되감아도 같은 자리로 돌아온다
+  let N = 18240
+  function apply(p) {
+    const o1 = seg(p, 0.05, 0.12)
+    put(intro, 0, -70 * out3(o1), 1, 1 - o1)
+    intro.style.visibility = o1 >= 1 ? 'hidden' : ''
+    const i2 = out3(seg(p, 0.12, 0.18)), o2 = seg(p, 0.5, 0.54)
+    put(head2, 0, 30 * (1 - i2) - 40 * o2, 1, i2 * (1 - o2))
+    const i3 = out3(seg(p, 0.54, 0.6))
+    put(head3, 0, 30 * (1 - i3), 1, i3)
+    const g = seg(p, 0.13, 0.2) * (1 - seg(p, 0.5, 0.56))
+    put(gtag, Gx - gw / 2, b2[0] - 46 + 8 * (1 - g), 1, g)
+    const c = out3(seg(p, 0.16, 0.22)) * (1 - seg(p, 0.5, 0.54))
+    count.style.transform = `translate3d(-50%,${12 * (1 - c)}px,0)`; count.style.opacity = c
+
+    // 걸린 위협 조각: 등장 → 게이트 통과하며 색이 바뀜 → 자리 → 표 행으로 비행
+    let caught = 0
+    chips.forEach((ch, k) => {
+      const a = 0.22 + k * 0.05
+      const e1 = seg(p, a, a + 0.01), e2 = io3(seg(p, a, a + 0.022)), e3 = seg(p, a + 0.014, a + 0.026), e4 = io3(seg(p, a + 0.024, a + 0.044))
+      const f0 = 0.6 + k * 0.02, e5 = io3(seg(p, f0, f0 + 0.06)), e6 = seg(p, f0 + 0.052, f0 + 0.066)
+      let x = ch._a[0] + (ch._b[0] - ch._a[0]) * e2, y = ch._a[1]
+      x += (ch._s[0] - x) * e4; y += (ch._s[1] - y) * e4
+      x += (ch._r[0] - x) * e5; y += (ch._r[1] - y) * e5 - Math.sin(Math.PI * e5) * 50
+      put(ch, x, y, 1 + (ds - 1) * e5, e1 * (1 - seg(e6, 0, 0.55)))
+      ch.children[0].style.opacity = e3
+      ch.children[3].style.opacity = e3
+      ch.children[3].style.transform = `translateX(${12 * (1 - out3(e3))}px)`
+      if (e3 > 0.5) caught++
+      const row = rows[k]
+      const r6 = seg(e6, 0.35, 1)
+      row.children[0].style.opacity = 1 - e6
+      for (const el of row.children[1].children) el.style.opacity = r6
+      row.children[1].children[1].style.transform = `translateX(${-8 * (1 - out3(r6))}px)`
+    })
+    mEl.textContent = caught
+
+    // 대시보드 틀이 조립된다
+    const d = out3(seg(p, 0.52, 0.6))
+    dash.style.transform = `translate3d(${dx}px,${dy + 48 * (1 - d)}px,0) scale(${ds})`
+    dash.style.opacity = d
+    parts.forEach((el, i) => {
+      const e = out3(seg(p, 0.54 + i * 0.007, 0.6 + i * 0.007))
+      el.style.opacity = e
+      el.style.transform = `translate3d(0,${14 * (1 - e)}px,0)`
+    })
+    // 숫자가 차오르고 막대가 자란다
+    const kf = out3(seg(p, 0.66, 0.8))
+    kvs.forEach((el) => (el.textContent = fmt(Math.round((el.dataset.live ? N : +el.dataset.to) * kf))))
+    cols.forEach((el, i) => (el.style.transform = `scaleY(${out3(seg(p, 0.68 + i * 0.014, 0.76 + i * 0.014))})`))
+  }
+
+  // 캔버스: 이벤트 흐름 + 탐지 게이트
+  const flashes = []
+  const DOTC = ['191,200,214', '90,101,121']
+  const BANDS = 8
+  const dotStyle = DOTC.map((c) => Array.from({ length: BANDS }, (_, b) => `rgba(${c},${((b + 0.5) / BANDS).toFixed(3)})`))
+  function draw(dt, t, p, k) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.fillStyle = '#0a0e17'
+    ctx.fillRect(0, 0, W, H)
+    if (k <= 0.001) return
+    const m = io3(seg(p, 0.07, 0.22))
+    const f = seg(p, 0.12, 0.2)
+    const top = b1[0] + (b2[0] - b1[0]) * m, bot = b1[1] + (b2[1] - b1[1]) * m, h = bot - top, cy = (top + bot) / 2
+    const conv = 0.18 + 0.36 * m, wid = W * (0.34 - 0.08 * m)
+    const gate = seg(p, 0.1, 0.2) * (1 - seg(p, 0.5, 0.58))
+
+    // 움직임: 흐르다가 게이트를 지나면 대부분 회색으로 떨어지고, 일부만 색을 띤다
+    const step = (p0) => {
+      const xo = p0.x
+      if (p0.st === 0) {
+        p0.x += p0.v * dt
+        const gx = (p0.x - Gx) / wid
+        p0.y = cy + (top + p0.u * h - cy) * (1 - conv * Math.exp(-gx * gx))
+        const cross = xo < Gx && p0.x >= Gx && dt > 0
+        if (cross && gate > 0.3) N++
+        // 게이트를 막 지났거나, 필터가 켜질 때 이미 오른쪽에 있던 것도 차례로 떨어뜨린다
+        if (f > 0 && ((cross && rnd() < f) || (p0.x > Gx && rnd() < f * dt * 3))) {
+          p0.st = cross && p0.chip && rnd() < 0.08 ? 2 : 1
+          p0.t = 0
+          p0.vy = -30 + rnd() * 70
+          p0.sev = rnd() < 0.4 ? 0 : rnd() < 0.6 ? 1 : 2
+          if (cross && p0.chip) flashes.push({ y: p0.y, t: 0, c: p0.st === 2 ? SEV[p0.sev][0] : '157,187,255' })
+        }
+        if (p0.x - p0.w > W + 20) respawn(p0)
+      } else {
+        p0.t += dt
+        if (p0.st === 1) { p0.x += p0.v * 0.3 * dt; p0.vy += 980 * dt; p0.y += p0.vy * dt }
+        else p0.x += p0.v * 0.12 * dt
+        if (p0.t > (p0.st === 1 ? 0.75 : 1.2)) respawn(p0)
+      }
+    }
+
+    // 빛줄기 점: 알파 단계별로 묶어서 한 번에 채운다
+    for (const p0 of P) step(p0)
+    for (let c = 0; c < 2; c++) {
+      for (let b = 0; b < BANDS; b++) {
+        ctx.fillStyle = dotStyle[c][b]
+        ctx.beginPath()
+        for (const p0 of P) {
+          if ((p0.st === 1) !== (c === 1)) continue
+          let a = (0.1 + 0.55 * p0.z) * k
+          if (p0.st === 1) a *= 1 - p0.t / 0.75
+          const bi = (a * BANDS) | 0
+          if (bi !== b) continue
+          const len = p0.st ? 4 : 4 + p0.v * 0.05
+          ctx.rect(p0.x - len, p0.y, len, p0.z > 0.75 ? 1.5 : 1)
+        }
+        ctx.fill()
+      }
+    }
+
+    // 글자 조각: 먼 것부터 그린다
+    for (const p0 of C) {
+      step(p0)
+      if (!sprites.length) continue
+      const sp = p0.st === 2 ? hotSprite(p0.s, p0.sev) : sprites[p0.st === 1 ? 0 : tierOf(p0.z)][p0.s]
+      const sc = chipScale(p0.z)
+      let a = k
+      if (p0.st === 1) a *= 0.7 * (1 - p0.t / 0.75)
+      if (p0.st === 2) a = k * (p0.t < 0.7 ? 1 : 1 - (p0.t - 0.7) / 0.5)
+      if (a <= 0.01) continue
+      const x0 = p0.x - p0.w
+      if (x0 > W || p0.x < 0) continue
+      ctx.globalAlpha = a
+      ctx.drawImage(sp.c, x0, p0.y - (sp.h * sc) / 2, sp.w * sc, sp.h * sc)
+    }
+    ctx.globalAlpha = 1
+
+    // 1장 문장 뒤를 바탕색으로 눌러 글자가 읽히게 한다
+    const scrim = 1 - seg(p, 0.11, 0.17)
+    if (scrim > 0) {
+      const rx = W < 860 ? W * 0.8 : Math.min(W * 0.52, 720), ry = scrimRy
+      ctx.save()
+      ctx.translate(W / 2, scrimY)
+      ctx.scale(rx / ry, 1)
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, ry)
+      gr.addColorStop(0, 'rgba(10,14,23,.97)')
+      gr.addColorStop(0.55, 'rgba(10,14,23,.9)')
+      gr.addColorStop(1, 'rgba(10,14,23,0)')
+      ctx.globalAlpha = scrim
+      ctx.fillStyle = gr
+      ctx.fillRect(-ry, -ry, ry * 2, ry * 2)
+      ctx.restore()
+      ctx.globalAlpha = 1
+    }
+
+    // 움직임 줄이기 화면: 흐름 아래 끝을 바탕색으로 녹인다
+    if (REDUCE) {
+      const gr = ctx.createLinearGradient(0, H - 160, 0, H)
+      gr.addColorStop(0, 'rgba(10,14,23,0)')
+      gr.addColorStop(1, 'rgba(10,14,23,1)')
+      ctx.fillStyle = gr
+      ctx.fillRect(0, H - 160, W, 160)
+    }
+
+    // 탐지 게이트: 세로 선 + 눈금 + 위아래로 훑는 구간 + 통과할 때 깜빡임
+    if (gate > 0) {
+      const gt = b2[0] - 14, gb = b2[1] + 14, gl = (gb - gt) * out3(gate)
+      ctx.globalAlpha = gate
+      ctx.fillStyle = 'rgba(58,114,255,.9)'
+      ctx.fillRect(Gx - 0.5, gt, 1, gl)
+      ctx.fillStyle = 'rgba(157,187,255,.22)'
+      ctx.beginPath()
+      for (let y = gt; y < gt + gl; y += 14) ctx.rect(Gx - 4, y, 8, 1)
+      ctx.fill()
+      const sy = gt + ((Math.sin(t * 1.3) + 1) / 2) * Math.max(0, gl - 70)
+      ctx.fillStyle = '#9dbbff'
+      ctx.fillRect(Gx - 1, sy, 2, 70)
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const fl = flashes[i]
+        fl.t += dt
+        if (fl.t > 0.4) { flashes.splice(i, 1); continue }
+        ctx.fillStyle = `rgba(${fl.c},${(1 - fl.t / 0.4).toFixed(3)})`
+        ctx.fillRect(Gx - 12, fl.y, 24, 1)
+      }
+      ctx.globalAlpha = 1
+    } else flashes.length = 0
+  }
+
+  // 하나의 rAF 루프: 화면에 보일 때만 돈다
+  let pT = 0, pS = 0, t = 0, last = 0, running = false, inView = true
+  const st = { k: 0 }
+  function frame(now) {
+    if (!inView) { running = false; return }
+    const dt = Math.min(0.05, (now - last) / 1000 || 0)
+    last = now; t += dt
+    const prev = pS
+    pS += (pT - pS) * (1 - Math.exp(-dt * 10))
+    if (Math.abs(pT - pS) < 0.0004) pS = pT
+    if (pS !== prev || pS > 0.6) apply(pS)
+    draw(dt, t, pS, st.k * (1 - seg(pS, 0.52, 0.64)))
+    nEl.textContent = fmt(N)
+    requestAnimationFrame(frame)
+  }
+  const start = () => { if (!running && inView) { running = true; last = performance.now(); requestAnimationFrame(frame) } }
+
+  const fontsReady = document.fonts ? Promise.race([document.fonts.load("500 12px 'JetBrains Mono'"), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve()
+
+  if (REDUCE) {
+    // 움직임 줄이기: 고정 없이 최종 대시보드와 모든 문장
+    stage.classList.add('hx-static')
+    const still = () => {
+      cv.style.height = intro.offsetTop + intro.offsetHeight + 'px'
+      layout(); apply(1); intro.style.visibility = ''; draw(0, 0, 0, 1)
+    }
+    fontsReady.then(() => { buildSprites(); still() })
+    addEventListener('resize', still)
+    return
+  }
+
+  // 첫 진입: 문장이 아래에서 올라오고 흐름이 번진다
+  gsap.set(words, { yPercent: 115 })
+  gsap.set([eb, sub, cta], { opacity: 0, y: 16 })
+  gsap.timeline({ delay: 0.1 })
+    .to(st, { k: 1, duration: 1.4, ease: 'power2.out' }, 0)
+    .to(eb, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0.15)
+    .to(words, { yPercent: 0, duration: 1.05, ease: 'power4.out', stagger: 0.09 }, 0.25)
+    .to([sub, cta], { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1 }, 0.7)
+
+  layout()
+  apply(0)
+  fontsReady.then(() => { buildSprites(); placeChips(); layout(); apply(pS) })
+
+  ScrollTrigger.create({
+    trigger: root, start: 'top top', end: '+=320%', pin: true,
+    onUpdate: (s) => { pT = s.progress; start() },
+  })
+  addEventListener('resize', () => { layout(); apply(pS) })
+  new IntersectionObserver(([e]) => { inView = e.isIntersecting; start() }).observe(stage)
+  start()
+})()
+</script>
+
+<style>
+  /* 동작 방식: 고정(pin)된 콘솔이 조사 → 대응으로 바뀐다 */
+  .fl { position: relative; background: var(--bg); padding: 150px 0 40px; }
+  .fl-head .h2 { margin-top: 16px; }
+  .fl-head .lead { margin-top: 18px; }
+  .fl-pin { display: flex; align-items: center; height: 100vh; height: 100svh; padding-top: 64px; }
+  .fl-grid { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 780px); gap: 56px; align-items: center; width: 100%; }
+
+  /* 왼쪽 단계 */
+  .fl-side { position: relative; padding-left: 30px; }
+  .fl-rail { position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--line-strong); }
+  .fl-rail i { display: block; width: 2px; height: 100%; margin-left: -0.5px; background: var(--accent); transform: scaleY(0); transform-origin: top; }
+  .fl-done { display: flex; align-items: center; gap: 8px; margin-bottom: 34px; font: 500 12px var(--mono); letter-spacing: 0.04em; color: var(--faint); }
+  .fl-done svg { flex: none; width: 16px; height: 16px; padding: 3px; border-radius: 50%; background: var(--raised); stroke: var(--mid); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .fl-steps { display: grid; gap: 44px; list-style: none; }
+  .fl-sn { font: 600 12px var(--mono); letter-spacing: 0.12em; color: var(--accent-ink); }
+  .fl-step h3 { margin-top: 8px; font-size: 48px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
+  .fl-step p { margin-top: 12px; max-width: 300px; font-size: 16px; line-height: 1.6; color: var(--mid); text-wrap: pretty; }
+  .fl-step + .fl-step > * { opacity: 0.26; }
+
+  /* 콘솔 창: 고정 크기로 그리고 칸에 맞춰 줄인다 */
+  .fl-stage { position: relative; perspective: 1800px; }
+  .fl-tilt { height: 100%; transform-origin: 50% 100%; }
+  .fl-win { --p: 18px; --sh: 56px; --ch: 76px; position: absolute; top: 0; left: 0; width: 780px; height: 560px; transform-origin: 0 0; border-radius: 14px; overflow: hidden; background: var(--bg); box-shadow: var(--shadow), 0 0 0 1px var(--line-strong); font-size: 12px; line-height: 1.4; color: var(--ink); }
+  .fl-bar { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; background: var(--shell); border-bottom: 1px solid var(--line); }
+  .fl-bar > i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+  .fl-bar > span { margin: 0 auto; transform: translateX(-26px); font: 500 11px var(--mono); color: var(--faint); letter-spacing: 0.04em; }
+  .fl-body { display: grid; grid-template-columns: 120px minmax(0, 1fr); height: calc(100% - 36px); }
+
+  /* 사이드바 */
+  .fl-nav { display: flex; flex-direction: column; padding: 0 8px 12px; background: var(--shell); border-right: 1px solid var(--line); }
+  .fl-brand { display: flex; align-items: center; gap: 8px; height: 52px; margin: 0 -8px 8px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+  .fl-brand img { width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .fl-brand b { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .fl-menu { position: relative; display: flex; flex-direction: column; gap: 2px; }
+  .fl-menu h6 { padding: 10px 8px 4px; font: 600 9px var(--mono); letter-spacing: 0.14em; color: var(--faint); }
+  .fl-menu a { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 9px; font-size: 12px; font-weight: 500; color: var(--ink-2); transition: color 160ms; }
+  .fl-menu svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+  .fl-pill { position: absolute; top: 0; left: 0; right: 0; height: 30px; border-radius: 9px; background: var(--accent); }
+  .fl-menu a:first-of-type, .fl-menu[data-on='1'] a:nth-of-type(2) { color: #fff; }
+  .fl-menu[data-on='1'] a:first-of-type { color: var(--ink-2); }
+  .fl-cnt { margin-left: auto; padding: 0 5px; border-radius: 3px; background: rgba(240, 72, 72, 0.14); color: var(--crit); font: 600 10px/16px var(--mono); transition: color 160ms, background-color 160ms; }
+  .fl-menu[data-on='1'] .fl-cnt { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  .fl-navfoot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding: 0 8px; font-size: 11px; color: var(--mid); }
+
+  /* 수집 상태 점: 천천히 퍼지는 링 */
+  .fl-live { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+  .fl-live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--good); animation: fl-ping 2.2s infinite; }
+  @keyframes fl-ping { from { transform: scale(1); opacity: 0.55; } 70%, to { transform: scale(2.8); opacity: 0; } }
+
+  /* 상단바 */
+  .fl-top { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 var(--p); border-bottom: 1px solid var(--line); }
+  .fl-sw { display: grid; }
+  .fl-sw > * { grid-area: 1 / 1; align-self: center; }
+  .fl-sw > * + * { opacity: 0; visibility: hidden; }
+  .fl-crumb { font: 500 9.5px var(--mono); letter-spacing: 0.06em; color: var(--faint); }
+  .fl-title { margin-top: 2px; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .fl-search { display: flex; align-items: center; gap: 8px; width: 200px; height: 30px; margin-left: auto; padding: 0 10px; border-radius: 9px; box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 11.5px; color: var(--faint); }
+  .fl-search svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .fl-search kbd { margin-left: auto; padding: 0 5px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line-strong); font: 500 10px/16px var(--mono); }
+  .fl-content { position: relative; height: calc(100% - 52px); }
+  .fl-content > * { position: absolute; left: var(--p); right: var(--p); }
+  .fl-inc > * { position: absolute; left: 0; right: 0; }
+
+  /* 공통 패널 */
+  .fl-panel { border-radius: 14px; background: var(--panel); box-shadow: 0 0 0 1px var(--line); }
+  .fl-ph { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  .fl-ph h4 { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .fl-ph span { font: 500 10.5px var(--mono); color: var(--faint); }
+  .fl-ph em { margin-left: auto; font-style: normal; font-size: 11px; color: var(--mid); }
+
+  /* 장면 1: 대시보드 */
+  .fl-dash { top: var(--p); }
+  .fl-strip { display: grid; grid-template-columns: 150px repeat(4, minmax(0, 1fr)); height: var(--sh); }
+  .fl-strip > div { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 14px; border-left: 1px solid var(--line); }
+  .fl-strip > div:first-child { flex-direction: row; align-items: center; gap: 10px; border-left: 0; }
+  .fl-strip small { font-size: 10.5px; color: var(--mid); white-space: nowrap; }
+  .fl-strip b { font: 600 15px var(--mono); letter-spacing: -0.01em; }
+  .fl-strip b span { color: var(--faint); font-weight: 500; }
+  .fl-strip .fl-lv b { display: block; font-size: 10.5px; letter-spacing: 0.1em; }
+  .fl-strip .fl-lv small { color: var(--faint); }
+  .fl-tbl { margin-top: 12px; overflow: hidden; }
+  .fl-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 80px 70px 76px; align-items: center; column-gap: 12px; height: 52px; padding: 0 16px; }
+  .fl-rows .fl-row, .fl-slot { border-top: 1px solid var(--line); }
+  .fl-slot { height: 52px; }
+  .fl-row.fl-hr { height: 30px; font: 600 9.5px var(--mono); letter-spacing: 0.1em; color: var(--faint); }
+  .fl-row[data-s]::before, .fl-sev { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 2px; background: var(--c); }
+  .fl-row[data-s='high'] { --c: var(--high); }
+  .fl-row[data-s='med'] { --c: var(--med); }
+  .fl-row[data-s='good'] { --c: var(--good); }
+  .fl-t { min-width: 0; }
+  .fl-t b { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .fl-t code { display: block; margin-top: 1px; font: 400 10px var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-h { font: 500 11.5px var(--mono); color: var(--ink-2); }
+  .fl-d { justify-items: end; font: 400 10.5px var(--mono); color: var(--mid); text-align: right; }
+  .fl-new { padding: 0 5px; border-radius: 3px; background: var(--raised); color: var(--accent-ink); font: 600 9.5px/16px var(--mono); letter-spacing: 0.06em; }
+
+  /* 경보 행: 대시보드에서는 표의 첫 줄, 조사에서는 머리 카드가 된다 */
+  .fl-hero { top: calc(var(--p) + var(--sh) + 12px + 44px + 30px + 1px); height: 52px; z-index: 2; border-radius: 14px; }
+  .fl-hero > span { position: absolute; }
+  .fl-hbg { inset: 0; border-radius: 14px; background: var(--panel); box-shadow: 0 0 0 1px var(--line); opacity: 0; visibility: hidden; }
+  .fl-hl { inset: 4px 6px; border-radius: 10px; background: var(--raised); opacity: 0.7; }
+  .fl-hero .fl-sev { --c: var(--crit); transform-origin: center; }
+  .fl-hero .fl-row { z-index: 1; }
+
+  /* 장면 2: 증거 체인 + 프로세스 트리 */
+  .fl-inc { top: calc(var(--p) + 64px); bottom: 0; }
+  .fl-chain { top: 0; height: var(--ch); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-radius: 10px; overflow: hidden; opacity: 0; visibility: hidden; }
+  .fl-c { position: relative; padding: 11px 12px 0; border-left: 1px solid var(--line); }
+  .fl-c:first-child { border-left: 0; }
+  .fl-cc { opacity: 0; }
+  .fl-cc > span { font: 500 10px var(--mono); color: var(--faint); }
+  .fl-cc small { display: block; margin-top: 5px; font-size: 11px; line-height: 1.3; color: var(--mid); }
+  .fl-cc b { display: grid; margin-top: 3px; font: 600 12px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-cc b > * { overflow: hidden; text-overflow: ellipsis; }
+  .fl-c5 b > span:first-child { color: var(--faint); font-weight: 500; }
+  .fl-cb { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--faint); transform: scaleX(0); transform-origin: left; }
+  .fl-cb.warn { background: var(--high); }
+  .fl-cb.hit { background: var(--crit); }
+  .fl-cb.ok { background: var(--good); }
+  .fl-chev { position: absolute; z-index: 1; top: 50%; right: -5px; width: 9px; height: 9px; margin-top: -4.5px; background: var(--panel); border-top: 1px solid var(--line-strong); border-right: 1px solid var(--line-strong); transform: rotate(45deg); opacity: 0; }
+  .fl-tree { top: calc(var(--ch) + 12px); overflow: hidden; opacity: 0; visibility: hidden; }
+  .fl-tree .fl-ph { height: 38px; }
+  .fl-tree ul { padding: 6px 0; }
+  .fl-tree li { position: relative; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 16px 0 calc(16px + var(--d) * 22px); font: 400 11.5px var(--mono); color: var(--ink-2); white-space: nowrap; }
+  .fl-tree li > * { position: relative; }
+  .fl-g { color: var(--faint); }
+  .fl-pn { color: var(--ink); font-weight: 600; }
+  .fl-arg { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--mid); }
+  .fl-pid { flex: none; margin-left: auto; font-size: 10.5px; color: var(--faint); }
+  .fl-tree li .fl-hl, .fl-tree li .fl-sev { position: absolute; }
+  .fl-tree li .fl-hl { inset: 2px 6px; opacity: 0; }
+  .fl-tree li .fl-sev { --c: var(--crit); top: 8px; bottom: 8px; transform: scaleY(0); }
+  .fl-bad .badge { flex: none; opacity: 0; }
+
+  /* 권고 박스 → 대응 패널 */
+  .fl-adv { top: calc(var(--ch) + 12px); display: flex; align-items: center; gap: 14px; height: 64px; padding: 0 12px 0 16px; border-left: 2px solid var(--accent); border-radius: 10px; background: var(--raised); opacity: 0; visibility: hidden; }
+  .fl-adv small { display: block; font: 500 9.5px var(--mono); letter-spacing: 0.1em; color: var(--faint); }
+  .fl-adv p { margin-top: 2px; font-size: 12.5px; color: var(--ink-2); }
+  .fl-adv p b { font: 600 12px var(--mono); color: var(--ink); }
+  .fl-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .fl-acts .fl-sw { justify-items: end; align-items: center; }
+  .fl-btn { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px; border-radius: 9px; box-shadow: inset 0 0 0 1px var(--line-strong); background: var(--hover); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .fl-btn.primary { border-radius: 980px; box-shadow: none; background: var(--accent); color: #fff; }
+  .fl-spin { width: 12px; height: 12px; animation: fl-rot 0.8s linear infinite; }
+  @keyframes fl-rot { to { transform: rotate(360deg); } }
+
+  /* 장면 3: 호스트 카드 + 처리 시간 */
+  .fl-host { top: calc(var(--ch) + 88px); display: grid; grid-template-columns: 172px minmax(0, 1fr) auto; align-items: center; gap: 18px; height: 84px; padding: 0 18px; opacity: 0; visibility: hidden; }
+  .fl-host > div b { display: block; font: 600 15px var(--mono); letter-spacing: -0.01em; }
+  .fl-host > div small { font: 400 10.5px var(--mono); color: var(--faint); }
+  .fl-host dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-left: 18px; border-left: 1px solid var(--line); }
+  .fl-host dt { font-size: 10.5px; color: var(--faint); }
+  .fl-host dd { margin-top: 2px; font: 600 12px var(--mono); color: var(--ink-2); }
+  .fl-tl { top: calc(var(--ch) + 184px); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 22px; height: 76px; padding: 0 20px; opacity: 0; visibility: hidden; }
+  .fl-tlx { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .fl-trk { position: absolute; top: 4px; left: 4px; width: 75%; height: 1px; background: var(--line-strong); }
+  .fl-trk i { display: block; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+  .fl-ts { position: relative; padding-top: 18px; }
+  .fl-ts > i, .fl-ts > em { position: absolute; top: 0; left: 0; width: 9px; height: 9px; border-radius: 50%; }
+  .fl-ts > i { background: var(--panel); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+  .fl-ts > em { background: var(--accent); opacity: 0; }
+  .fl-ts b { display: block; font-size: 12px; font-weight: 600; }
+  .fl-ts small { font: 500 10.5px var(--mono); color: var(--faint); }
+  .fl-stamp { padding-left: 22px; border-left: 1px solid var(--line); opacity: 0; }
+  .fl-stamp small { display: block; font-size: 10.5px; color: var(--mid); }
+  .fl-stamp b { font: 600 24px/1.2 var(--mono); letter-spacing: -0.02em; }
+
+  /* 가짜 커서 */
+  .fl-cur { position: absolute; top: 0; left: 0; z-index: 9; width: 20px; height: 20px; transform-origin: 3px 2px; opacity: 0; visibility: hidden; pointer-events: none; }
+  .fl-cur svg { position: relative; display: block; }
+  .fl-rip { position: absolute; left: -11px; top: -12px; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-2); opacity: 0; }
+
+  @media (max-width: 1080px) and (min-width: 861px) {
+    .fl-grid { gap: 40px; }
+    .fl-step h3 { font-size: 40px; }
+  }
+  @media (max-width: 860px) {
+    .fl { padding-top: 110px; }
+    .fl-pin { padding-top: 64px; }
+    .fl-grid { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+    .fl-side { padding: 18px 0 0; }
+    .fl-rail { right: 0; bottom: auto; width: auto; height: 1px; }
+    .fl-rail i { width: 100%; height: 2px; margin: -0.5px 0 0; transform: scaleX(0); transform-origin: left; }
+    .fl-done { position: absolute; top: -30px; left: 0; margin: 0; font-size: 11px; }
+    .fl-steps { position: relative; grid-template-columns: 1fr 1fr; gap: 0 16px; padding-bottom: 54px; }
+    .fl-step h3 { margin-top: 4px; font-size: 26px; }
+    .fl-step p { position: absolute; left: 0; right: 0; bottom: 0; max-width: none; margin: 0; font-size: 14px; line-height: 1.55; }
+    .fl-step + .fl-step p { opacity: 0; }
+    .fl-static .fl-step + .fl-step p { opacity: 1; }
+    .fl-static .fl-step p { position: static; margin-top: 6px; }
+    .fl-static .fl-steps { padding-bottom: 0; }
+    .fl-stage { margin: 0 -8px; }
+    .fl-win { --p: 14px; --ch: 84px; width: 500px; height: 536px; }
+    .fl-body { grid-template-columns: minmax(0, 1fr); }
+    .fl-nav, .fl-search, .fl-strip .fl-m4, .fl-host dl > div:last-child { display: none; }
+    .fl-strip { grid-template-columns: 136px repeat(3, minmax(0, 1fr)); }
+    .fl-row { grid-template-columns: minmax(0, 1fr) 62px 62px; column-gap: 10px; }
+    .fl-row > :nth-child(4) { display: none; }
+    .fl-c { padding: 10px 7px 0; }
+    .fl-cc b { font-size: 10px; }
+    .fl-host { grid-template-columns: 132px minmax(0, 1fr) auto; gap: 14px; padding: 0 14px; }
+    .fl-host dl { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 14px; }
+    .fl-adv p { font-size: 12px; }
+    .fl-tl { gap: 16px; padding: 0 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fl-live::after, .fl-spin { animation: none; }
+  }
+</style>
+
+<section id="flow" class="fl" aria-labelledby="fl-title">
+  <div class="wrap fl-head">
+    <p class="eyebrow">HOW IT WORKS</p>
+    <h2 class="h2" id="fl-title">클릭 한 번으로<br />원인부터 조치까지</h2>
+    <p class="lead">경보를 누르면 공격 경로가 그려지고, 같은 화면에서 바로 막습니다.</p>
+  </div>
+
+  <div class="fl-pin">
+    <div class="wrap fl-grid">
+      <div class="fl-side">
+        <div class="fl-rail"><i></i></div>
+        <p class="fl-done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>탐지 완료 · web-03 경보</p>
+        <ol class="fl-steps">
+          <li class="fl-step"><span class="fl-sn">01</span><h3>조사</h3><p>경보를 누르면 공격이 어떻게 이어졌는지 순서대로 그려집니다.</p></li>
+          <li class="fl-step"><span class="fl-sn">02</span><h3>대응</h3><p>프로세스 종료와 호스트 격리까지 그 자리에서 끝냅니다.</p></li>
+        </ol>
+      </div>
+
+      <div class="fl-stage" role="img" aria-label="EDRdog 콘솔에서 web-03 경보를 열어 공격 경로를 확인하고, 악성 프로세스를 종료한 뒤 호스트를 격리하는 화면">
+        <div class="fl-tilt">
+          <div class="fl-win" aria-hidden="true">
+            <div class="fl-bar"><i></i><i></i><i></i><span>EDRdog Console</span></div>
+            <div class="fl-body">
+              <aside class="fl-nav">
+                <div class="fl-brand"><img src="logo.png" alt="" /><b>EDRdog</b></div>
+                <div class="fl-menu">
+                  <span class="fl-pill"></span>
+                  <a><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>대시보드</a>
+                  <h6>TRIAGE</h6>
+                  <a><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17h.01" /></svg>위협<span class="fl-cnt" data-from="5">5</span></a>
+                  <a><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z" /></svg>사건</a>
+                  <h6>EVIDENCE</h6>
+                  <a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1" /><path d="M8 20h8M12 16v4" /></svg>엔드포인트</a>
+                  <a><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4" /></svg>수집 로그</a>
+                  <h6>ANALYSIS</h6>
+                  <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18" /></svg>위협 지도</a>
+                  <a><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="12" cy="18" r="2.5" /><path d="M7.5 8 11 16M16.5 8 13 16" /></svg>관계 분석</a>
+                </div>
+                <div class="fl-navfoot"><span class="fl-live"></span>8대 수집 중</div>
+              </aside>
+
+              <div class="fl-main">
+                <header class="fl-top">
+                  <div>
+                    <div class="fl-sw fl-crumb fl-sw-crumb"><span>EDRDOG / OVERVIEW</span><span>EDRDOG / THREATS / TH-2041</span><span>EDRDOG / THREATS / TH-2041 / RESPONSE</span></div>
+                    <div class="fl-sw fl-title fl-sw-title"><span>대시보드</span><span>인코딩된 PowerShell 실행</span><span>대응 조치</span></div>
+                  </div>
+                  <div class="fl-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>호스트·위협 검색<kbd>/</kbd></div>
+                </header>
+
+                <div class="fl-content">
+                  <div class="fl-dash">
+                    <div class="fl-strip fl-panel">
+                      <div class="fl-lv"><span class="fl-live"></span><div><b>LIVE SIGNAL</b><small>마지막 수집 2초 전</small></div></div>
+                      <div><small>24시간 수집 이벤트</small><b class="fl-ev" data-from="18447">18,447</b></div>
+                      <div><small>탐지 규칙 적중</small><b>10</b></div>
+                      <div><small>온라인 엔드포인트</small><b>8 <span>/ 8</span></b></div>
+                      <div class="fl-m4"><small>위험 호스트</small><b>2</b></div>
+                    </div>
+                    <div class="fl-tbl fl-panel">
+                      <div class="fl-ph"><h4>최근 탐지된 위협</h4><span>실시간</span><em>전체 보기</em></div>
+                      <div class="fl-row fl-hr"><span>위협</span><span>호스트</span><span>심각도</span><span style="text-align:right">탐지 시각</span></div>
+                      <div class="fl-rows">
+                        <div class="fl-slot"></div>
+                        <div class="fl-row" data-s="high"><div class="fl-t"><b>외부 C2 서버 반복 연결</b><code>c2_beacon</code></div><span class="fl-h">fin-02</span><span><span class="badge high"><i></i>높음</span></span><span class="fl-d">02:11:40</span></div>
+                        <div class="fl-row" data-s="high"><div class="fl-t"><b>LSASS 메모리 접근</b><code>lsass_memory_access</code></div><span class="fl-h">dev-01</span><span><span class="badge high"><i></i>높음</span></span><span class="fl-d">02:03:12</span></div>
+                        <div class="fl-row" data-s="med"><div class="fl-t"><b>비정상 시간대 로그인</b><code>off_hours_logon</code></div><span class="fl-h">hr-04</span><span><span class="badge med"><i></i>보통</span></span><span class="fl-d">01:52:07</span></div>
+                        <div class="fl-row" data-s="good"><div class="fl-t"><b>원격 관리 도구 실행</b><code>remote_admin_tool</code></div><span class="fl-h">it-02</span><span><span class="badge good"><i></i>정상</span></span><span class="fl-d">01:40:55</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="fl-hero">
+                    <span class="fl-hbg"></span>
+                    <span class="fl-hl"></span>
+                    <span class="fl-sev"></span>
+                    <div class="fl-row">
+                      <div class="fl-t"><b>인코딩된 PowerShell 실행<span class="fl-new">NEW</span></b><code>powershell_encoded · T1059.001</code></div>
+                      <span class="fl-h">web-03</span>
+                      <span><span class="badge crit"><i></i>심각</span></span>
+                      <span class="fl-sw fl-d fl-sw-res"><span>02:14:06</span><span><span class="badge good"><i></i>해결됨</span></span></span>
+                    </div>
+                  </div>
+
+                  <div class="fl-inc">
+                    <div class="fl-chain fl-panel">
+                      <div class="fl-c"><div class="fl-cc"><span>01</span><small>첨부파일 열람</small><b>견적서.docm</b></div><i class="fl-cb"></i><i class="fl-chev"></i></div>
+                      <div class="fl-c"><div class="fl-cc"><span>02</span><small>매크로가 셸 실행</small><b>winword.exe</b></div><i class="fl-cb"></i><i class="fl-chev"></i></div>
+                      <div class="fl-c"><div class="fl-cc"><span>03</span><small>자동 실행 등록</small><b>HKCU\…\Run</b></div><i class="fl-cb warn"></i><i class="fl-chev"></i></div>
+                      <div class="fl-c"><div class="fl-cc"><span>04</span><small>C2 서버 연결</small><b>185.220.101.4</b></div><i class="fl-cb hit"></i><i class="fl-chev"></i></div>
+                      <div class="fl-c fl-c5"><div class="fl-cc"><span>05</span><small>대응</small><b class="fl-sw fl-sw-c5"><span>조치 대기</span><span>종료 · 격리</span></b></div><i class="fl-cb ok"></i></div>
+                    </div>
+
+                    <div class="fl-tree fl-panel">
+                      <div class="fl-ph"><h4>프로세스 트리</h4><span>web-03 · 10.0.4.23</span></div>
+                      <ul>
+                        <li style="--d:0"><span class="fl-pn">outlook.exe</span><span class="fl-arg">메일 첨부파일 열기</span><span class="fl-pid">PID 2210</span></li>
+                        <li style="--d:1"><span class="fl-g">└─</span><span class="fl-pn">winword.exe</span><span class="fl-arg">견적서.docm</span><span class="fl-pid">PID 3376</span></li>
+                        <li style="--d:2" class="fl-bad"><span class="fl-hl"></span><span class="fl-sev"></span><span class="fl-g">└─</span><span class="fl-pn">powershell.exe</span><span class="fl-arg">-enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0</span><span class="fl-pid">PID 4182</span><span class="badge crit"><i></i>악성</span></li>
+                        <li style="--d:3"><span class="fl-g">└─</span><span class="fl-pn">tcp</span><span class="fl-arg">185.220.101.4:443</span><span class="fl-pid">연결 12회</span></li>
+                      </ul>
+                    </div>
+
+                    <div class="fl-adv">
+                      <div><small>RECOMMENDED</small><p><b>web-03</b> 의 악성 프로세스를 종료하고 격리하세요</p></div>
+                      <div class="fl-acts">
+                        <span class="fl-sw fl-sw-kill"><span class="fl-btn primary">프로세스 종료</span><span class="fl-btn primary"><svg class="fl-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-9-9" /></svg>종료 요청 중</span><span class="badge good"><i></i>종료 완료 · PID 4182</span></span>
+                        <span class="fl-sw fl-sw-iso"><span class="fl-btn">호스트 격리</span><span class="badge low"><i></i>격리됨</span></span>
+                      </div>
+                    </div>
+
+                    <div class="fl-host fl-panel">
+                      <div><b>web-03</b><small>Windows Server 2022</small></div>
+                      <dl>
+                        <div><dt>네트워크</dt><dd class="fl-sw fl-sw-net"><span>연결됨</span><span>차단됨</span></dd></div>
+                        <div><dt>powershell.exe</dt><dd class="fl-sw fl-sw-ps"><span>실행 중</span><span>종료됨</span></dd></div>
+                        <div><dt>에이전트</dt><dd>정상 수집</dd></div>
+                      </dl>
+                      <span class="fl-sw fl-sw-host"><span class="badge crit"><i></i>위험</span><span class="badge low"><i></i>격리됨</span></span>
+                    </div>
+
+                    <div class="fl-tl fl-panel">
+                      <div class="fl-tlx">
+                        <span class="fl-trk"><i></i></span>
+                        <div class="fl-ts"><i></i><em></em><b>탐지</b><small>T+00:00</small></div>
+                        <div class="fl-ts"><i></i><em></em><b>조사</b><small>T+00:09</small></div>
+                        <div class="fl-ts"><i></i><em></em><b>종료</b><small>T+00:38</small></div>
+                        <div class="fl-ts"><i></i><em></em><b>격리</b><small>T+00:47</small></div>
+                      </div>
+                      <div class="fl-stamp"><small>탐지부터 해결까지</small><b>T+00:47</b></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fl-cur"><span class="fl-rip"></span><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 2l13 7.6-5.7 1.3 3.3 6.1-2.4 1.2-3.2-6.2L3.6 16z" fill="var(--ink)" stroke="var(--bg)" stroke-width="1.3" stroke-linejoin="round" /></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  ;(() => {
+    const root = document.getElementById('flow')
+    if (!root) return
+    const q = (s, el = root) => el.querySelector(s)
+    const qa = (s, el = root) => [...el.querySelectorAll(s)]
+    const pin = q('.fl-pin'), stage = q('.fl-stage'), tilt = q('.fl-tilt'), win = q('.fl-win')
+
+    // 콘솔은 고정 크기로 그리고 칸 너비에 맞춰 줄이거나 키운 뒤 가운데 둔다
+    const fit = () => {
+      const s = Math.min(1.25, stage.clientWidth / win.offsetWidth)
+      win.style.transform = `scale(${s})`
+      win.style.left = (stage.clientWidth - win.offsetWidth * s) / 2 + 'px'
+      stage.style.height = win.offsetHeight * s + 'px'
+    }
+    fit()
+    ScrollTrigger.addEventListener('refreshInit', fit)
+
+    // 창 왼쪽 위 기준 레이아웃 좌표 (transform 은 무시된다)
+    const off = (el) => {
+      let x = 0, y = 0
+      for (; el && el !== win; el = el.offsetParent) { x += el.offsetLeft; y += el.offsetTop }
+      return { x, y }
+    }
+    const fmt = (n) => Math.round(n).toLocaleString('en-US')
+
+    // 머리말은 들어올 때 한 번 떠오른다
+    if (!window.REDUCE) {
+      gsap.from(q('.fl-head').children, { y: 28, autoAlpha: 0, duration: 0.9, stagger: 0.08, ease: 'power3.out', scrollTrigger: { trigger: q('.fl-head'), start: 'top 85%' } })
+    }
+
+    gsap.matchMedia().add({ mob: '(max-width: 860px)', desk: '(min-width: 861px)' }, (ctx) => {
+      const mob = ctx.conditions.mob
+      fit()
+      const W = win.offsetWidth, H = win.offsetHeight
+      const tl = gsap.timeline({ paused: true, defaults: { duration: 0.4, ease: 'power2.inOut' } })
+
+      // 자주 쓰는 동작
+      const swap = (sel, a, b, t) => {
+        const k = q(sel).children
+        tl.to(k[a], { autoAlpha: 0, y: -6, duration: 0.2 }, t)
+        tl.fromTo(k[b], { autoAlpha: 0, y: 6 }, { autoAlpha: 1, y: 0, duration: 0.25 }, t + 0.1)
+      }
+      const cur = q('.fl-cur'), rip = q('.fl-rip')
+      const press = (btn, t) => {
+        tl.to(cur, { scale: 0.82, duration: 0.06, ease: 'power1.out' }, t)
+        tl.to(cur, { scale: 1, duration: 0.14, ease: 'power1.out' }, t + 0.06)
+        tl.fromTo(rip, { scale: 0.2, autoAlpha: 0.9 }, { scale: 1.5, autoAlpha: 0, duration: 0.45, ease: 'power2.out', immediateRender: false }, t)
+        tl.to(btn, { scale: 0.96, duration: 0.06 }, t).to(btn, { scale: 1, duration: 0.14 }, t + 0.06)
+      }
+      const aim = (el, fx, fy) => ({ x: () => off(el).x + el.offsetWidth * fx, y: () => off(el).y + el.offsetHeight * fy })
+
+      // 왼쪽 단계와 진행선
+      const steps = qa('.fl-step'), list = q('.fl-steps'), fill = q('.fl-rail i')
+      const axis = mob ? 'scaleX' : 'scaleY'
+      const mark = (i) => () => mob ? (steps[i].offsetLeft + 30) / list.offsetWidth : (steps[i].offsetTop + list.offsetTop + 10) / q('.fl-side').offsetHeight
+      const step = (i, on, t) => {
+        const s = steps[i]
+        tl.to([q('.fl-sn', s), q('h3', s)], { opacity: on ? 1 : 0.26, duration: 0.35 }, t)
+        tl.to(q('p', s), { opacity: on ? 1 : mob ? 0 : 0.26, duration: 0.35 }, t)
+      }
+      tl.fromTo(fill, { [axis]: mark(0) }, { [axis]: mark(1), duration: 4.9, ease: 'none' }, 0)
+      tl.to(fill, { [axis]: 1, duration: 4.1, ease: 'none' }, 4.9)
+
+      // 시작: 대시보드, 수집 수치는 계속 오른다
+      const ev = q('.fl-ev'), evo = { v: +ev.dataset.from }
+      tl.to(evo, { v: evo.v + 38, duration: 1.4, ease: 'none', onUpdate: () => { ev.textContent = fmt(evo.v) } }, 0)
+
+      // 커서가 경보 행을 누른다
+      const hero = q('.fl-hero'), heroRow = q('.fl-row', hero)
+      tl.fromTo(cur, { x: W * 0.72, y: H + 24, autoAlpha: 0 }, { ...aim(q('.fl-t b', hero), 0.62, 0.6), autoAlpha: 1, duration: 0.7, ease: 'power3.out' }, 0.25)
+      tl.to(q('.fl-hl', hero), { opacity: 1, duration: 0.2 }, 0.8)
+      press(heroRow, 1.0)
+
+      // 조사: 경보 행이 머리 카드로 올라가고 대시보드는 물러난다
+      const T2 = 1.2
+      swap('.fl-sw-crumb', 0, 1, T2)
+      swap('.fl-sw-title', 0, 1, T2)
+      const items = qa('.fl-menu a')
+      tl.to(q('.fl-pill'), { y: () => items[1].offsetTop - items[0].offsetTop, duration: 0.45, ease: 'power3.inOut' }, T2)
+      tl.set(q('.fl-menu'), { attr: { 'data-on': 1 } }, T2 + 0.2)
+      tl.to(cur, { x: '+=36', y: '+=80', autoAlpha: 0, duration: 0.45, ease: 'power2.in' }, T2)
+      tl.to(q('.fl-strip'), { y: -16, autoAlpha: 0, duration: 0.4 }, T2)
+      tl.to(q('.fl-tbl'), { y: 28, autoAlpha: 0, duration: 0.45 }, T2 + 0.05)
+      tl.to(hero, { y: () => q('.fl-dash').offsetTop - hero.offsetTop, duration: 0.7, ease: 'power3.inOut' }, T2 + 0.05)
+      tl.to(q('.fl-hbg'), { autoAlpha: 1, duration: 0.4 }, T2 + 0.2)
+      tl.to(q('.fl-hl', hero), { opacity: 0, duration: 0.3 }, T2 + 0.1)
+      tl.to(q('.fl-new'), { autoAlpha: 0, scale: 0.8, duration: 0.2 }, T2)
+
+      // 증거 체인: 아래 선이 왼쪽부터 이어지며 칸이 하나씩 열린다
+      tl.fromTo(q('.fl-chain'), { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 1.75)
+      qa('.fl-c').forEach((c, i) => {
+        const t = 1.95 + i * 0.3
+        if (i < 4) {
+          tl.fromTo(q('.fl-cc', c), { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out' }, t)
+          tl.fromTo(q('.fl-cb', c), { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: 'none' }, t)
+          tl.fromTo(q('.fl-chev', c), { opacity: 0 }, { opacity: 1, duration: 0.15 }, t + 0.26)
+        } else tl.fromTo(q('.fl-cc', c), { autoAlpha: 0, y: 8 }, { autoAlpha: 0.5, y: 0, duration: 0.3, ease: 'power2.out' }, t)
+      })
+
+      // 프로세스 트리: 줄이 차례로 나오고 악성 노드가 표시된다
+      const tree = q('.fl-tree'), bad = q('.fl-bad')
+      tl.fromTo(tree, { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 3.05)
+      tl.fromTo(qa('.fl-tree li'), { autoAlpha: 0, x: -10 }, { autoAlpha: 1, x: 0, duration: 0.25, stagger: 0.13, ease: 'power2.out' }, 3.2)
+      tl.to(q('.fl-hl', bad), { opacity: 1, duration: 0.25 }, 3.7)
+      tl.to(q('.fl-sev', bad), { scaleY: 1, duration: 0.25 }, 3.7)
+      tl.fromTo(q('.badge', bad), { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.25, ease: 'back.out(2)' }, 3.8)
+
+      // 권고 박스: 트리 아래에 붙는다 (자리는 대응 장면 위치, 지금은 아래로 내려 둔다)
+      const adv = q('.fl-adv'), advDY = () => tree.offsetHeight + 12
+      tl.fromTo(adv, { autoAlpha: 0, y: () => advDY() + 14 }, { autoAlpha: 1, y: advDY, duration: 0.4, ease: 'power3.out' }, 4.0)
+
+      // 대응: 트리가 빠지고 권고 박스가 올라와 조치 패널이 된다
+      const T3 = 4.9
+      step(0, false, T3)
+      step(1, true, T3)
+      swap('.fl-sw-crumb', 1, 2, T3)
+      swap('.fl-sw-title', 1, 2, T3)
+      tl.to(tree, { autoAlpha: 0, y: -14, scale: 0.98, duration: 0.3, ease: 'power2.in' }, T3)
+      tl.to(adv, { y: 0, duration: 0.55, ease: 'power3.inOut' }, T3 + 0.15)
+      tl.fromTo(q('.fl-host'), { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, T3 + 0.6)
+      tl.fromTo(q('.fl-tl'), { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.45, ease: 'power3.out' }, T3 + 0.7)
+      const dots = qa('.fl-ts em'), trk = q('.fl-trk i')
+      tl.to(dots[0], { opacity: 1, duration: 0.15 }, T3 + 0.85)
+      tl.to(trk, { scaleX: 1 / 3, duration: 0.3, ease: 'none' }, T3 + 0.9)
+      tl.to(dots[1], { opacity: 1, duration: 0.15 }, T3 + 1.15)
+
+      // 프로세스 종료: 누름 → 요청 중 → 종료 완료
+      const kill = q('.fl-sw-kill .fl-btn'), iso = q('.fl-sw-iso .fl-btn')
+      tl.set(cur, { x: W * 0.62, y: H + 24 }, 5.5)
+      tl.to(cur, { ...aim(kill, 0.55, 0.6), autoAlpha: 1, duration: 0.55, ease: 'power3.out' }, 5.55)
+      press(kill, 6.1)
+      swap('.fl-sw-kill', 0, 1, 6.15)
+      swap('.fl-sw-kill', 1, 2, 6.75)
+      swap('.fl-sw-ps', 0, 1, 6.8)
+      tl.to(trk, { scaleX: 2 / 3, duration: 0.3, ease: 'none' }, 6.8)
+      tl.to(dots[2], { opacity: 1, duration: 0.15 }, 7.05)
+
+      // 호스트 격리: 누름 → 격리됨, 체인 05 가 초록으로 닫힌다
+      tl.to(cur, { ...aim(iso, 0.5, 0.6), duration: 0.35, ease: 'power2.inOut' }, 6.95)
+      press(iso, 7.35)
+      swap('.fl-sw-iso', 0, 1, 7.4)
+      swap('.fl-sw-host', 0, 1, 7.45)
+      swap('.fl-sw-net', 0, 1, 7.45)
+      const c5 = q('.fl-c5')
+      tl.to(q('.fl-cc', c5), { autoAlpha: 1, duration: 0.25 }, 7.5)
+      swap('.fl-sw-c5', 0, 1, 7.5)
+      tl.fromTo(q('.fl-cb', c5), { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: 'power2.out' }, 7.55)
+      tl.to(trk, { scaleX: 1, duration: 0.3, ease: 'none' }, 7.5)
+      tl.to(dots[3], { opacity: 1, duration: 0.15 }, 7.75)
+
+      // 마무리: 처리 시간 도장, 경보는 해결됨
+      tl.fromTo(q('.fl-stamp'), { opacity: 0, x: 12 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 7.85)
+      swap('.fl-sw-res', 0, 1, 7.95)
+      const cnt = q('.fl-cnt'), cno = { v: +cnt.dataset.from }
+      tl.to(cno, { v: cno.v - 1, duration: 0.1, ease: 'none', onUpdate: () => { cnt.textContent = Math.round(cno.v) } }, 8)
+      tl.to(cur, { x: '+=40', y: '+=50', autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, 7.9)
+      tl.to({}, { duration: 0.6 }, 8.4)
+
+      // 동작 줄이기: 고정 없이 마지막 장면을 보여 준다
+      if (window.REDUCE) {
+        root.classList.add('fl-static')
+        tl.progress(1)
+        gsap.set(qa('.fl-step > *'), { opacity: 1 })
+        return () => root.classList.remove('fl-static')
+      }
+
+      // 콘솔이 기울어진 채로 올라와 바로 선다
+      gsap.fromTo(tilt, { y: 90, rotateX: 14, scale: 0.94, autoAlpha: 0.25 }, { y: 0, rotateX: 0, scale: 1, autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: pin, start: 'top bottom', end: 'top 8%', scrub: 0.6 } })
+      gsap.fromTo(q('.fl-side'), { y: 40, autoAlpha: 0 }, { y: 0, autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: pin, start: 'top 85%', end: 'top 20%', scrub: 0.6 } })
+
+      ScrollTrigger.create({ trigger: pin, start: 'top top', end: '+=280%', pin: true, scrub: 0.6, animation: tl, anticipatePin: 1, invalidateOnRefresh: true })
+    })
+  })()
+</script>
+
+<style>
+  /* 위협 지도 + 관계 분석 */
+  .mp { position: relative; padding: 160px 0; background: var(--bg); }
+  .mp .eyebrow { margin-bottom: 18px; }
+  .mp-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 48px; align-items: end; margin-bottom: 72px; }
+  .mp-head .lead { padding-bottom: 10px; }
+
+  /* 지도 + 목록 */
+  .mp-stage { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 48px; align-items: center; margin-inline: calc((100% - min(1320px, 100vw - 64px)) / 2); }
+  .mp-mapbox { position: relative; min-width: 0; }
+  #mp-canvas { display: block; width: 100%; height: 320px; }
+  .mp-legend { display: flex; align-items: center; gap: 20px; margin-top: 20px; font: 500 11px var(--mono); letter-spacing: .04em; color: var(--mid); }
+  .mp-legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .mp-legend i { width: 6px; height: 6px; border-radius: 50%; }
+  .mp-legend .mp-coord { margin-left: auto; color: var(--faint); }
+
+  .mp-list { overflow: hidden; }
+  .mp-list-hd { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .mp-list-hd b { font-size: 14px; font-weight: 600; }
+  .mp-list-hd small { font: 500 10px var(--mono); letter-spacing: .1em; color: var(--faint); }
+  .mp-list-hd .badge { margin-left: auto; }
+  .mp-list .badge.good i { position: relative; }
+  .mp-list .badge.good i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: currentColor; animation: mp-ping 2s ease-out infinite; }
+  @keyframes mp-ping { from { transform: scale(1); opacity: .7; } to { transform: scale(3.4); opacity: 0; } }
+  #mp-rows { position: relative; }
+  .mp-row { position: relative; padding: 11px 18px 11px 20px; line-height: 1.4; border-top: 1px solid var(--line); }
+  .mp-row:first-child { border-top: 0; }
+  .mp-fl { position: absolute; inset: 0; background: var(--raised); opacity: 0; pointer-events: none; }
+  .mp-band { position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; border-radius: 0 3px 3px 0; }
+  .mp-ra, .mp-rb { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .mp-ra .mono { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .mp-rb { margin-top: 3px; font-size: 12px; color: var(--mid); }
+  .mp-rb b { margin-right: 8px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
+  .mp-cnt { display: inline-block; color: var(--ink-2); }
+  .mp-cnt small { margin-left: 2px; font: 400 11px var(--sans); color: var(--faint); }
+  .mp-list-ft { display: flex; justify-content: space-between; align-items: baseline; padding: 13px 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--mid); }
+  .mp-list-ft b { font: 600 15px var(--mono); color: var(--ink); letter-spacing: -.01em; }
+
+  /* 관계 분석 */
+  .mp-rel { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 56px; align-items: center; margin-top: 220px; }
+  .mp-rel .h2 { font-size: clamp(32px, 3.4vw, 48px); }
+  .mp-rel .lead { margin-top: 22px; font-size: 17px; }
+  .mp-steps { margin-top: 40px; }
+  .mp-steps li { position: relative; display: grid; grid-template-columns: 34px 1fr; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .mp-steps li > span { padding-top: 3px; font-size: 12px; color: var(--faint); }
+  .mp-steps b { font-size: 16px; font-weight: 600; }
+  .mp-steps p { margin-top: 2px; font-size: 14px; color: var(--mid); }
+  .mp-steps i { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--accent); transform-origin: 0 50%; }
+
+  .mp-gcard { min-width: 0; overflow: hidden; }
+  .mp-g-hd { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--faint); letter-spacing: .02em; }
+  .mp-g-hd b { margin-right: 10px; font-weight: 600; color: var(--ink-2); }
+  #mp-graph { display: block; width: 100%; height: auto; padding: 12px; background-image: radial-gradient(var(--line) 1px, transparent 1.2px); background-size: 22px 22px; background-position: 11px 11px; }
+  #mp-graph text { font-family: var(--mono); }
+  .mp-nb { fill: var(--raised); stroke: var(--line-strong); stroke-width: 1; }
+  .mp-nh { fill: none; stroke-width: 1.5; opacity: 0; }
+  .mp-nd { opacity: 0; }
+  .mp-tg { fill: var(--hover); }
+  .mp-tt { fill: var(--mid); font-weight: 600; letter-spacing: .08em; }
+  .mp-lt { fill: var(--ink); font-weight: 500; }
+  .mp-e { fill: none; stroke: var(--line-strong); stroke-width: 1.25; }
+  .mp-em { fill: none; stroke-width: 2; stroke-linecap: round; }
+  .mp-el { opacity: 0; }
+  .mp-el rect { fill: var(--panel); }
+  .mp-el text { fill: var(--faint); }
+  .mp-pk { opacity: 0; }
+  .mp-verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 15px 18px; border-top: 1px solid var(--line); }
+  .mp-verdict > b { font-size: 14px; font-weight: 600; }
+  .mp-ttp { display: flex; gap: 6px; margin-left: auto; }
+  .mp-ttp span { padding: 3px 7px; border-radius: 3px; background: var(--raised); font-size: 10.5px; color: var(--ink-2); }
+
+  @media (max-width: 860px) {
+    .mp { padding: 112px 0; }
+    .mp-head { grid-template-columns: 1fr; gap: 20px; margin-bottom: 40px; }
+    .mp-head .lead, .mp-rel .lead { font-size: 16px; padding: 0; }
+    .mp-stage { grid-template-columns: 1fr; gap: 24px; margin-inline: 0; }
+    .mp-legend { gap: 14px; margin-top: 14px; }
+    .mp-legend .mp-coord { display: none; }
+    .mp-rel { grid-template-columns: 1fr; gap: 36px; margin-top: 140px; }
+    .mp-steps { margin-top: 28px; }
+    .mp-steps i { display: none; }
+    #mp-graph { padding: 8px 4px; }
+    .mp-ttp { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .mp-list .badge.good i::after { animation: none; } }
+</style>
+
+<section id="map" class="mp" aria-labelledby="mp-title">
+  <div class="wrap">
+    <div class="mp-head">
+      <div>
+        <p class="eyebrow mp-up">THREAT MAP</p>
+        <h2 class="h2 mp-up" id="mp-title">어디서 들어오는지<br />한눈에</h2>
+      </div>
+      <p class="lead mp-up">에이전트가 수집한 외부 연결을 지도 위에 그립니다. 위험한 목적지는 색으로 떠오르고, 어느 나라에서 몇 번 들어왔는지 바로 보입니다.</p>
+    </div>
+
+    <div class="mp-stage">
+      <div class="mp-mapbox">
+        <canvas id="mp-canvas" role="img" aria-label="서울 본사로 들어오는 외부 연결을 나라별로 보여주는 세계 지도"></canvas>
+        <div class="mp-legend">
+          <span><i style="background: var(--crit)"></i>심각</span>
+          <span><i style="background: var(--high)"></i>높음</span>
+          <span><i style="background: var(--accent)"></i>서울 본사</span>
+          <span class="mp-coord">37.57N 126.98E</span>
+        </div>
+      </div>
+      <aside class="card mp-list" aria-label="실시간 외부 연결 목록">
+        <div class="mp-list-hd">
+          <b>외부 연결</b><small>최근 24시간</small>
+          <span class="badge good"><i></i>LIVE</span>
+        </div>
+        <ul id="mp-rows"></ul>
+        <div class="mp-list-ft"><span>오늘 차단한 연결</span><b id="mp-total">1,284</b></div>
+      </aside>
+    </div>
+
+    <div class="mp-rel" id="mp-rel">
+      <div class="mp-rel-text">
+        <p class="eyebrow mp-up2">RELATION</p>
+        <h2 class="h2 mp-up2">흩어진 흔적을<br />하나로 잇습니다</h2>
+        <p class="lead mp-up2">프로세스, 파일, 레지스트리, 네트워크 기록을 사건 하나로 묶습니다. 공격이 어디서 시작해 어디까지 갔는지 선을 따라 읽으면 됩니다.</p>
+        <ol class="mp-steps mp-up2">
+          <li><span class="mono">01</span><div><b>흔적 모으기</b><p>호스트 한 대에서 나온 실행, 파일, 통신 기록</p></div><i></i></li>
+          <li><span class="mono">02</span><div><b>관계 잇기</b><p>누가 무엇을 실행했고 어디로 나갔는지</p></div><i></i></li>
+          <li><span class="mono">03</span><div><b>경로 판정</b><p>악성 경로만 남기고 나머지는 흐리게</p></div><i></i></li>
+        </ol>
+      </div>
+      <div class="card mp-gcard">
+        <div class="mp-g-hd mono"><span><b>INC-2417</b>web-03 · 상관 분석</span><span id="mp-gcount"></span></div>
+        <svg id="mp-graph" role="img" aria-label="web-03 사건 관계도. invoice.docm 문서를 연 winword.exe 가 powershell.exe 를 실행했고, powershell.exe 가 자동 실행 레지스트리 키를 쓰고 185.220.101.4 와 통신했습니다."></svg>
+        <div class="mp-verdict">
+          <span class="badge crit"><i></i>심각</span>
+          <b>악성 매크로 문서에서 시작된 외부 통신</b>
+          <span class="mp-ttp mono"><span>T1566.001</span><span>T1059.001</span><span>T1547.001</span><span>T1071</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const R = window.REDUCE
+  const $ = (s) => document.querySelector(s)
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim()
+  const C = { dot: css('--line-strong'), faint: css('--faint'), accent: css('--accent'), accentInk: css('--accent-ink'), ink: css('--ink'), crit: css('--crit'), high: css('--high') }
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+  const out3 = (t) => 1 - Math.pow(1 - t, 3)
+  const clamp = (v) => Math.max(0, Math.min(1, v))
+
+  /* ---------- 1. 위협 지도 ---------- */
+
+  // 육지 비트맵: Natural Earth 110m 를 1.8도 격자(200x79, 84N~58S)로 구운 것 (mp_tools/landmask.py)
+  const COLS = 200, ROWS = 79, LAT0 = 84, CELL = 1.8
+  const raw = atob('AAAAAAAAC/+AP/8AAAAAAAAAAAAAAAAAAAAAAAAAAf//////+AAAAAIAAADAAAAAAAAAAAAAACP/+////8AAP+AAAAAB/AAAAAAAAAAAAGYXP9/////AAByAAAAAAA4AAAAAAAAAAAD/n/8H////gAAAAAAPwAP/4ADwAAAAAAAB5E3/gA///4AAAAAAOAB///wAMAAAAAAAA//fv+AH//8AAAAAAGA/////8H8AAIA/+Bw/97/8B///AAAB+AAwf///////+AGA/////+fufgP//AAAB//Mf///////////+P///////l/D/8AQAB////////////////n///////z/g/wB8AA/f/////////////8A///////ODwH4AOAA////////////////AP//////APgA+AAAAfz/////////////+AH/z////wD9gBAAAAH+////////////x6AADgD///+Af8AAAABhvP//////////wB4AADgAP///8H/gAAAA4Pn//////////4A+AABAAD////7/+AAAAfD////////////APAAAAAAv///+//gAAAP7////////////8DgAAAAAB//////4AAAAf/////////////AAAAAAAAP/////ngAAAD/////////////QAAAAAAAB/////54AAAA/////////////kAAAAAAAAf/////gAAAAH//7/v///////4AAAAAAAAH////9AAAAAf//8D7///////44AAAAAAAB////+AAAAAH8e/eef//////4YAAAAAAAAf///+AAAAAB8M///3//////8GAAAAAAAAH////AAAAAAfAZn/8//////XBgAAAAAAAA////wAAAAADvwJ////////8x4AAAAAAAAH///8AAAAAA/8BC///////+N8AAAAAAAAAf//8AAAAAAf/xgf///////wwAAAAAAAAAH//+AAAAAAP///////////8IAAAAAAAAAA//xgAAAAAD/////v//////AAAAAAAAAAAP/AMAAAAAD/////9//////gAAAAAAAAAAB/wDAAAAAB////7/v/////4AAAAAAAAAAAL8AIAAAAAf////f/h////9AAAAAAAAAAAAfBeAAAAAP//////4P///8AAAAAAABAAAAH5weAAAAB////+/+A/x/kAAAAAAAAAAAAA/4BwAAAAf////n/AP4P6BAAAAAAAAAAAAD+AAAAAAH////9/gD8D/AwAAAAAAAAAAAAD8AAAAAD//////gAeAP4MAAAAAAAAAAAAAPAAAAAA//////AAHgD+BgAAAAAAAAAAAAAw8AAAAH/////+AA4A3gcAAAAAAAAAAAAAP/+AAAA//////AAOAMgTAAAAAAAAAAAAAA//wAAAH/////wAAwBAA4AAAAAAAAAAAAAB//gAAA/////4AAABYDEAAAAAAAAAAAAAAf/8AAAEB///+AAAAbBwAAAAAAAAAAAAAAP//AAAAAH///AAAADx8AAAAAAAAAAAAAAH//4AAAAB///AAAAAc/5AAAAAAAAAAAAAB///gAAAAf//wAAAADHsGgAAAAAAAAAAAAf///gAAAH//4AAAAA57F/CAAAAAAAAAAAH///+AAAA//8AAAAAGAoH5gAAAAAAAAAAB////gAAAH//AAAAAAeAAfCAAAAAAAAAAAP///4AAAB//wAAAAAB1QHYAAAAAAAAAAAD///8AAAAf/+AAAAAAAgADAAAAAAAAAAAAf//+AAAAH//hAAAAAAAHEAAAAAAAAAAAAH///gAAAB//4wAAAAAALzAAAAAAAAAAAAA///4AAAA//+cAAAAAAH+4AIAAAAAAAAAAD//8AAAAP//PAAAAAAD/+AACAAAAAAAAAAf//AAAAB//DwAAAAAB//wAAAAAAAAAAAAH//wAAAAf/w4AAAAAD//+AQAAAAAAAAAAB//4AAAAD/8OAAAAAB///wAAAAAAAAAAAA//wAAAAA//DgAAAAAf//+AAAAAAAAAAAAP/4AAAAAP/AAAAAAAH///gAAAAAAAAAAAD/+AAAAAB/wAAAAAAB///8AAAAAAAAAAAA//AAAAAAf4AAAAAAAP//+AAAAAAAAAAAAP/wAAAAAD+AAAAAAAD///gAAAAAAAAAAAD/4AAAAAA+AAAAAAAA+B/wAAAAAAAAAAAB/4AAAAAAAAAAAAAAAAAP8ACAAAAAAAAAAf+AAAAAAAAAAAAAAAAAB/AAYAAAAAAAAAH+AAAAAAAAAAAAAAAAAABAAOAAAAAAAAAB/AAAAAAAAAAAAAAAAAAA4AHAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAGADgAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgAAAAAAAAAAACAAAAAAAAAAAAAAAAAAADwwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==')
+  const isLand = (c, r) => (raw.charCodeAt((r * COLS + c) >> 3) >> (7 - ((r * COLS + c) & 7))) & 1
+
+  const HOME = { lat: 37.57, lon: 126.98 }
+  const SRC = [
+    { cc: 'RU', name: '러시아 · 모스크바', ip: '91.243.44.130', lat: 55.75, lon: 37.62, sev: 'crit', n: 214 },
+    { cc: 'DE', name: '독일 · 프랑크푸르트', ip: '185.220.101.4', lat: 50.11, lon: 8.68, sev: 'crit', n: 198 },
+    { cc: 'NL', name: '네덜란드 · 암스테르담', ip: '45.137.21.9', lat: 52.37, lon: 4.9, sev: 'high', n: 176 },
+    { cc: 'US', name: '미국 · 애시번', ip: '23.94.180.12', lat: 39.04, lon: -77.49, sev: 'high', n: 149 },
+    { cc: 'SG', name: '싱가포르', ip: '103.152.36.18', lat: 1.35, lon: 103.82, sev: 'high', n: 131 },
+    { cc: 'BR', name: '브라질 · 상파울루', ip: '177.54.150.200', lat: -23.55, lon: -46.63, sev: 'high', n: 118 },
+  ]
+  const SEV = { crit: '심각', high: '높음' }
+
+  // 목록 행
+  const ul = $('#mp-rows'), totalEl = $('#mp-total')
+  let total = 1284
+  for (const s of SRC) {
+    const li = document.createElement('li')
+    li.className = 'mp-row'
+    li.innerHTML = `<span class="mp-fl"></span><span class="mp-band" style="background:var(--${s.sev})"></span>
+      <div class="mp-ra"><span class="mono">${s.ip}</span><span class="badge ${s.sev}"><i></i>${SEV[s.sev]}</span></div>
+      <div class="mp-rb"><span><b class="mono">${s.cc}</b>${s.name}</span><span class="mp-cnt mono">${s.n}<small>회</small></span></div>`
+    s.li = li
+    s.cnt = li.querySelector('.mp-cnt')
+    ul.appendChild(li)
+  }
+
+  // 연결이 도착하면 숫자를 올리고, 순위가 바뀌면 행을 부드럽게 옮긴다(FLIP)
+  function onLand(s) {
+    const add = 1 + ((Math.random() * 3) | 0)
+    s.n += add
+    total += add
+    s.cnt.firstChild.nodeValue = s.n
+    totalEl.textContent = total.toLocaleString('en-US')
+    gsap.fromTo(s.li.firstChild, { opacity: 1 }, { opacity: 0, duration: 1.4, ease: 'power2.out' })
+    gsap.fromTo(s.cnt, { y: -5, opacity: 0.3 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' })
+    const order = [...SRC].sort((a, b) => b.n - a.n)
+    if (order.every((o, i) => ul.children[i] === o.li)) return
+    const before = new Map(order.map((o) => [o.li, o.li.getBoundingClientRect().top]))
+    order.forEach((o) => ul.appendChild(o.li))
+    for (const o of order) {
+      const dy = before.get(o.li) - o.li.getBoundingClientRect().top
+      if (dy) gsap.fromTo(o.li, { y: dy }, { y: 0, duration: 0.7, ease: 'power3.out' })
+    }
+  }
+
+  // 캔버스
+  const box = $('.mp-mapbox'), cv = $('#mp-canvas'), ctx = cv.getContext('2d')
+  const layer = document.createElement('canvas'), lctx = layer.getContext('2d')
+  let W = 0, H = 0, top = 0, mapH = 0, dpr = 1, dotR = 1, twinkles = []
+  const px = (lon) => ((lon + 180) / 360) * W
+  const py = (lat) => top + ((LAT0 - lat) / (ROWS * CELL)) * mapH
+  const disc = (c, x, y, r) => { c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill() }
+
+  // 점 지도를 한 번만 그려 둔다(크기가 바뀔 때만 다시)
+  function size() {
+    W = box.clientWidth
+    mapH = (W * ROWS) / COLS
+    top = Math.round(W * 0.05)
+    H = Math.round(mapH + top)
+    dpr = Math.min(window.devicePixelRatio || 1, 2)
+    for (const c of [cv, layer]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr) }
+    cv.style.height = H + 'px'
+    const pitch = W / COLS, step = pitch < 3.2 ? 2 : 1
+    dotR = Math.max(0.75, pitch * step * 0.3)
+    const hx = px(HOME.lon), hy = py(HOME.lat), dots = []
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    lctx.clearRect(0, 0, W, H)
+    for (let r = 0; r < ROWS; r += step) for (let c = 0; c < COLS; c += step) {
+      // 좁은 화면은 2x2 칸을 하나로 합친다(작은 섬이 사라지지 않게 OR)
+      if (!(isLand(c, r) || (step === 2 && (isLand(c + 1, r) || isLand(c, r + 1) || isLand(c + 1, r + 1))))) continue
+      const x = (c + step / 2) * pitch, y = top + (r + step / 2) * pitch
+      const edge = Math.min(1, Math.min(x, W - x) / (W * 0.07))
+      const near = Math.max(0, 1 - Math.hypot(x - hx, y - hy) / (W * 0.11))
+      lctx.globalAlpha = edge
+      lctx.fillStyle = C.dot
+      disc(lctx, x, y, dotR)
+      if (near > 0) { lctx.globalAlpha = near * 0.9 * edge; lctx.fillStyle = C.faint; disc(lctx, x, y, dotR) }
+      dots.push([x, y])
+    }
+    lctx.globalAlpha = 1
+    twinkles = Array.from({ length: 70 }, () => {
+      const d = dots[(Math.random() * dots.length) | 0]
+      return [d[0], d[1], Math.random() * 6.28, 0.0006 + Math.random() * 0.0012]
+    })
+    if (R) drawStatic()
+  }
+
+  function curve(s) {
+    const x0 = px(s.lon), y0 = py(s.lat), x2 = px(HOME.lon), y2 = py(HOME.lat)
+    const d = Math.hypot(x2 - x0, y2 - y0)
+    return [x0, y0, (x0 + x2) / 2, Math.max(2, (y0 + y2) / 2 - d * 0.3), x2, y2]
+  }
+  const qb = (k, t) => {
+    const u = 1 - t
+    return [u * u * k[0] + 2 * u * t * k[2] + t * t * k[4], u * u * k[1] + 2 * u * t * k[3] + t * t * k[5]]
+  }
+  function strokePart(k, a, b, n) {
+    ctx.beginPath()
+    for (let j = 0; j <= n; j++) { const p = qb(k, a + ((b - a) * j) / n); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]) }
+    ctx.stroke()
+  }
+  function drawHome(t) {
+    const hx = px(HOME.lon), hy = py(HOME.lat)
+    ctx.strokeStyle = C.accent
+    ctx.lineWidth = 1
+    for (const off of [0, 0.5]) {
+      const e = (t / 3200 + off) % 1
+      ctx.globalAlpha = (1 - e) * 0.55
+      ctx.beginPath(); ctx.arc(hx, hy, 5 + e * 22, 0, 6.2832); ctx.stroke()
+    }
+    ctx.fillStyle = C.accent
+    ctx.globalAlpha = 0.22; disc(ctx, hx, hy, 7)
+    ctx.globalAlpha = 1; disc(ctx, hx, hy, 3.4)
+    ctx.fillStyle = C.ink; disc(ctx, hx, hy, 1.2)
+    ctx.fillStyle = C.accentInk
+    ctx.font = '600 10px "JetBrains Mono", monospace'
+    ctx.fillText('SEOUL', hx + 11, hy + 17)
+  }
+  function drawSources(alpha) {
+    for (const s of SRC) {
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = C[s.sev]
+      disc(ctx, px(s.lon), py(s.lat), 2.2)
+    }
+    ctx.globalAlpha = 1
+  }
+
+  // 움직임을 끈 경우: 모든 경로를 그린 마지막 모습
+  function drawStatic() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, W, H)
+    ctx.drawImage(layer, 0, 0, W, H)
+    ctx.lineWidth = 1.2
+    for (const s of SRC) { ctx.strokeStyle = C[s.sev]; ctx.globalAlpha = 0.5; strokePart(curve(s), 0, 1, 40) }
+    drawSources(1)
+    drawHome(800)
+  }
+
+  const arcs = [], rings = []
+  let revealAt = -1, nextSpawn = 0
+  const TAIL = 0.34
+  function spawn(t) {
+    const pool = SRC.flatMap((s) => (s.sev === 'crit' ? [s, s, s] : [s, s]))
+    const s = pool[(Math.random() * pool.length) | 0]
+    const k = curve(s)
+    arcs.push({ s, t0: t, dur: 1100 + (Math.hypot(k[4] - k[0], k[5] - k[1]) / W) * 1700, landed: false })
+    rings.push({ x: k[0], y: k[1], col: C[s.sev], t0: t, dur: 900, r: 12 })
+  }
+
+  function drawMap(t) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, W, H)
+    if (revealAt < 0) return
+    const hx = px(HOME.lon), hy = py(HOME.lat)
+    const rv = clamp((t - revealAt) / 1900)
+    // 처음 보일 때 서울에서 퍼져 나가며 지도가 드러난다
+    if (rv < 1) {
+      const rr = out3(rv) * Math.hypot(Math.max(hx, W - hx), Math.max(hy, H - hy))
+      ctx.save(); ctx.beginPath(); ctx.arc(hx, hy, rr, 0, 6.2832); ctx.clip()
+      ctx.drawImage(layer, 0, 0, W, H)
+      ctx.restore()
+      ctx.globalAlpha = 0.4 * (1 - rv); ctx.strokeStyle = C.accent; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.arc(hx, hy, rr, 0, 6.2832); ctx.stroke()
+    } else ctx.drawImage(layer, 0, 0, W, H)
+
+    // 깜박이는 점 몇 개로 살아 있는 느낌
+    ctx.fillStyle = C.faint
+    for (const d of twinkles) {
+      const a = Math.sin(t * d[3] + d[2])
+      if (a > 0.55) { ctx.globalAlpha = (a - 0.55) * 2.2 * rv; disc(ctx, d[0], d[1], dotR) }
+    }
+    drawSources(clamp(rv * 2 - 1))
+
+    if (rv > 0.55 && t >= nextSpawn && arcs.length < 6) { spawn(t); nextSpawn = t + 380 + Math.random() * 520 }
+
+    // 연결 궤적: 밝은 머리 + 옅어지는 꼬리 + 지나간 길
+    ctx.lineCap = 'round'
+    for (let i = arcs.length - 1; i >= 0; i--) {
+      const a = arcs[i], k = curve(a.s), col = C[a.s.sev]
+      const u = (t - a.t0) / a.dur
+      const head = ease(clamp(u)), tail = ease(clamp(u - TAIL))
+      const fade = u < 1 + TAIL ? 1 : 1 - (u - 1 - TAIL) / 0.6
+      if (fade <= 0) { arcs.splice(i, 1); continue }
+      ctx.strokeStyle = col
+      ctx.globalAlpha = 0.16 * fade; ctx.lineWidth = 1
+      strokePart(k, 0, head, 36)
+      const n = 22
+      for (let j = 0; j < n; j++) {
+        const f = (j + 1) / n
+        ctx.globalAlpha = f * f
+        ctx.lineWidth = 0.4 + 1.8 * f
+        strokePart(k, tail + ((head - tail) * j) / n, tail + ((head - tail) * (j + 1)) / n, 2)
+      }
+      if (u < 1) {
+        const p = qb(k, head)
+        ctx.globalAlpha = 1; ctx.fillStyle = col; disc(ctx, p[0], p[1], 2.4)
+        ctx.fillStyle = C.ink; disc(ctx, p[0], p[1], 1.1)
+      }
+      if (u < 0.7) {
+        ctx.globalAlpha = Math.sin((u / 0.7) * Math.PI)
+        ctx.fillStyle = col
+        ctx.font = '600 10px "JetBrains Mono", monospace'
+        ctx.fillText(a.s.cc, k[0] + 7, k[1] - 7)
+      }
+      if (u >= 1 && !a.landed) {
+        a.landed = true
+        rings.push({ x: hx, y: hy, col, t0: t, dur: 1200, r: 24 })
+        onLand(a.s)
+      }
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const g = rings[i], e = (t - g.t0) / g.dur
+      if (e >= 1) { rings.splice(i, 1); continue }
+      ctx.globalAlpha = (1 - e) * 0.85; ctx.strokeStyle = g.col; ctx.lineWidth = 1.2
+      ctx.beginPath(); ctx.arc(g.x, g.y, 2 + out3(e) * g.r, 0, 6.2832); ctx.stroke()
+    }
+    ctx.globalAlpha = rv
+    drawHome(t)
+    ctx.globalAlpha = 1
+  }
+
+  /* ---------- 2. 관계 분석 ---------- */
+
+  // d: 넓은 화면 좌표(viewBox 756x440), m: 좁은 화면 좌표(360x402, 없으면 생략)
+  // k: high/crit 악성 경로, ctx 사건 맥락, off 무관
+  const NODES = [
+    { id: 'kim', t: 'USER', l: 'kim', d: [66, 64], m: [92, 36], k: 'ctx' },
+    { id: 'web', t: 'HOST', l: 'web-03', d: [66, 220], m: [268, 36], k: 'ctx' },
+    { id: 'doc', t: 'FILE', l: 'invoice.docm', d: [265, 64], m: [92, 146], k: 'high' },
+    { id: 'word', t: 'PROC', l: 'winword.exe', d: [265, 220], m: [268, 146], k: 'high' },
+    { id: 'exp', t: 'PROC', l: 'explorer.exe', d: [265, 376], k: 'off' },
+    { id: 'reg', t: 'REG', l: 'HKCU\\…\\Run', d: [464, 64], m: [92, 256], k: 'crit' },
+    { id: 'ps', t: 'PROC', l: 'powershell.exe', d: [464, 220], m: [268, 256], k: 'crit' },
+    { id: 'chr', t: 'PROC', l: 'chrome.exe', d: [464, 376], k: 'off' },
+    { id: 'dom', t: 'DOMAIN', l: 'update-cdn.top', d: [663, 64], m: [92, 366], k: 'crit' },
+    { id: 'ip', t: 'IP', l: '185.220.101.4', d: [663, 220], m: [268, 366], k: 'crit' },
+    { id: 'lan', t: 'IP', l: '10.20.0.15', d: [663, 376], k: 'off' },
+  ]
+  // 그려지는 순서대로. 넷째 값은 경로 색(악성일 때)
+  const EDGES = [
+    ['kim', 'web', 'logon', 'ctx'], ['web', 'word', 'runs', 'ctx'], ['web', 'exp', 'runs', 'off'],
+    ['doc', 'word', 'opened', 'high'], ['exp', 'chr', 'spawned', 'off'], ['word', 'ps', 'spawned', 'high'],
+    ['chr', 'lan', ':443', 'off'], ['ps', 'reg', 'wrote', 'crit'], ['ps', 'ip', ':443', 'crit'], ['dom', 'ip', 'resolves', 'crit'],
+  ]
+  const NS = 'http://www.w3.org/2000/svg'
+  const svg = $('#mp-graph'), card = $('.mp-gcard'), verdict = $('.mp-verdict')
+  const mk = (tag, at, parent) => {
+    const e = document.createElementNS(NS, tag)
+    for (const k in at) e.setAttribute(k, at[k])
+    parent.appendChild(e)
+    return e
+  }
+  const bad = (k) => k === 'high' || k === 'crit'
+
+  function edgePath(a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y
+    if (Math.abs(dy) < 1) { const s = Math.sign(dx); return `M${a.x + (s * a.w) / 2} ${a.y}H${b.x - (s * b.w) / 2}` }
+    if (Math.abs(dx) < 1) { const s = Math.sign(dy); return `M${a.x} ${a.y + (s * a.h) / 2}V${b.y - (s * b.h) / 2}` }
+    const s = Math.sign(dx), x1 = a.x + (s * a.w) / 2, x2 = b.x - (s * b.w) / 2, xm = (x1 + x2) / 2
+    return `M${x1} ${a.y}C${xm} ${a.y} ${xm} ${b.y} ${x2} ${b.y}`
+  }
+  const dash = (p) => { const l = p.getTotalLength(); p.style.strokeDasharray = l; p.style.strokeDashoffset = l; return l }
+
+  // 화면 폭에 맞는 그래프를 새로 그린다
+  function build(desk) {
+    const S = desk
+      ? { w: 756, h: 440, f: 13, cw: 7.8, nh: 54, tg: 9, pad: 28, ef: 9.5 }
+      : { w: 360, h: 402, f: 11, cw: 6.6, nh: 46, tg: 8.5, pad: 22, ef: 8.5 }
+    svg.innerHTML = ''
+    svg.setAttribute('viewBox', `0 0 ${S.w} ${S.h}`)
+    const gE = mk('g', {}, svg), gM = mk('g', {}, svg), gL = mk('g', {}, svg), gP = mk('g', {}, svg), gN = mk('g', {}, svg)
+    const G = { nodes: [], edges: [], mal: [], hl: [], off: [], ctx: [], pk: [] }
+    const at = {}
+    for (const n of NODES) {
+      const pos = desk ? n.d : n.m
+      if (!pos) continue
+      const tw = n.t.length * S.tg * 0.64 + 10, th = S.tg + 7
+      const w = Math.max(n.l.length * S.cw, tw + 20) + S.pad, h = S.nh
+      const o = mk('g', { transform: `translate(${pos[0]} ${pos[1]})` }, gN)
+      const g = mk('g', {}, o)
+      mk('rect', { x: -w / 2, y: -h / 2, width: w, height: h, rx: 10, class: 'mp-nb' }, g)
+      const x0 = -w / 2 + S.pad / 2, ty = -h / 2 + (desk ? 10 : 8)
+      mk('rect', { x: x0, y: ty, width: tw, height: th, rx: 3, class: 'mp-tg' }, g)
+      mk('text', { x: x0 + 5, y: ty + th / 2, 'font-size': S.tg, 'dominant-baseline': 'central', class: 'mp-tt' }, g).textContent = n.t
+      mk('text', { x: x0, y: h / 2 - (desk ? 11 : 9), 'font-size': S.f, class: 'mp-lt' }, g).textContent = n.l
+      if (bad(n.k)) {
+        const ring = mk('rect', { x: -w / 2, y: -h / 2, width: w, height: h, rx: 10, class: 'mp-nh' }, g)
+        ring.style.stroke = `var(--${n.k})`
+        const dot = mk('circle', { cx: w / 2 - S.pad / 2 - 2, cy: ty + th / 2, r: 3, class: 'mp-nd' }, g)
+        dot.style.fill = `var(--${n.k})`
+        G.hl.push(ring, dot)
+      }
+      at[n.id] = { x: pos[0], y: pos[1], w, h, k: n.k }
+      G.nodes.push(g)
+      if (n.k === 'off') G.off.push(g)
+      if (n.k === 'ctx') G.ctx.push(g)
+    }
+    for (const [a, b, label, k] of EDGES) {
+      if (!at[a] || !at[b]) continue
+      const d = edgePath(at[a], at[b])
+      const p = mk('path', { d, class: 'mp-e' }, gE)
+      const len = dash(p)
+      const mid = p.getPointAtLength(len / 2)
+      const lab = mk('g', { class: 'mp-el' }, gL)
+      const lw = label.length * S.ef * 0.6 + 10
+      mk('rect', { x: mid.x - lw / 2, y: mid.y - 8, width: lw, height: 16, rx: 3 }, lab)
+      mk('text', { x: mid.x, y: mid.y, 'font-size': S.ef, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, lab).textContent = label
+      G.edges.push({ p, lab })
+      if (k === 'off') G.off.push(p, lab)
+      if (k === 'ctx') G.ctx.push(p, lab)
+      if (bad(k)) {
+        const o = mk('path', { d, class: 'mp-em' }, gM)
+        o.style.stroke = `var(--${k})`
+        dash(o)
+        G.mal.push(o)
+        const c = mk('circle', { r: desk ? 2.8 : 2.4, class: 'mp-pk' }, gP)
+        c.style.fill = `var(--${k})`
+        G.pk.push({ c, p: o, len })
+      }
+    }
+    $('#mp-gcount').textContent = `노드 ${G.nodes.length} · 연결 ${G.edges.length}`
+    return G
+  }
+
+  // 스크롤 장면: 모으기 -> 잇기 -> 판정
+  function scene(G, desk) {
+    // 좁은 화면은 단계 목록이 그래프와 함께 보이지 않으므로 목록은 그대로 둔다
+    const steps = desk ? [...document.querySelectorAll('.mp-steps li')] : [{}, {}, {}]
+    const bars = desk ? steps.map((li) => li.querySelector('i')) : [{}, {}, {}]
+    const tl = gsap.timeline({ defaults: { ease: 'none' } })
+    tl.set(steps, { opacity: 0.38 }, 0).set(bars, { scaleX: 0 }, 0)
+    tl.to(steps[0], { opacity: 1, duration: 0.1 }, 0)
+    const spread = desk ? 70 : 40
+    tl.from(G.nodes, {
+      x: (i) => (((i * 7) % 11) - 5) * spread * 0.4,
+      y: (i) => (((i * 5) % 9) - 4) * spread * 0.45,
+      opacity: 0, scale: 0.88, transformOrigin: '50% 50%', duration: 0.7, stagger: 0.03, ease: 'power2.out',
+    }, 0)
+    tl.to(bars[0], { scaleX: 1, duration: 1 }, 0)
+
+    tl.to(steps[0], { opacity: 0.38, duration: 0.1 }, 1).to(steps[1], { opacity: 1, duration: 0.1 }, 1)
+    G.edges.forEach((e, i) => {
+      tl.to(e.p, { strokeDashoffset: 0, duration: 0.32 }, 1 + i * 0.13)
+      tl.to(e.lab, { opacity: 1, duration: 0.12 }, 1.24 + i * 0.13)
+    })
+    tl.to(bars[1], { scaleX: 1, duration: 1.6 }, 1)
+
+    const P = 2.85
+    tl.to(steps[1], { opacity: 0.38, duration: 0.1 }, P).to(steps[2], { opacity: 1, duration: 0.1 }, P)
+    tl.to(G.off, { opacity: 0.14, duration: 0.4 }, P)
+    tl.to(G.ctx, { opacity: 0.6, duration: 0.4 }, P)
+    G.mal.forEach((o, i) => tl.to(o, { strokeDashoffset: 0, duration: 0.3, ease: 'power1.inOut' }, P + 0.1 + i * 0.2))
+    tl.to(G.hl, { opacity: 1, duration: 0.25, stagger: 0.06 }, P + 0.1)
+    tl.to(bars[2], { scaleX: 1, duration: 1.3 }, P)
+    tl.fromTo(verdict, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }, P + 1.15)
+    tl.to({}, { duration: 0.35 })
+    return tl
+  }
+
+  // 판정이 끝나면 악성 경로 위로 신호가 흐른다
+  let G = null, relHi = false
+  function drawPackets(t) {
+    if (!G) return
+    G.pk.forEach((k, i) => {
+      if (!relHi) { k.c.style.opacity = 0; return }
+      const e = (t / 1700 + i * 0.23) % 1
+      const pt = k.p.getPointAtLength(e * k.len)
+      k.c.setAttribute('transform', `translate(${pt.x} ${pt.y})`)
+      k.c.style.opacity = Math.sin(e * Math.PI)
+    })
+  }
+
+  /* ---------- 공통: 한 개의 rAF, 화면 밖이면 멈춤 ---------- */
+  let clock = 0, last = 0, raf = 0, mapOn = false, relOn = false
+  function frame(now) {
+    clock += last ? Math.min(now - last, 50) : 16
+    last = now
+    if (mapOn) drawMap(clock)
+    if (relOn) drawPackets(clock)
+    raf = mapOn || relOn ? requestAnimationFrame(frame) : 0
+    if (!raf) last = 0
+  }
+  const wake = () => { if (!raf) raf = requestAnimationFrame(frame) }
+
+  new ResizeObserver(size).observe(box)
+
+  const mm = gsap.matchMedia()
+  mm.add({ desk: '(min-width: 861px)', mob: '(max-width: 860px)' }, (c) => {
+    const desk = c.conditions.desk
+    G = build(desk)
+    relHi = false
+    const tl = scene(G, desk)
+    if (R) { tl.progress(1); return }
+    ScrollTrigger.create(desk
+      ? { trigger: '#mp-rel', pin: true, start: 'center center', end: '+=1700', scrub: 0.8, anticipatePin: 1, animation: tl, onUpdate: (s) => { relHi = s.progress > 0.92 } }
+      : { trigger: card, pin: true, start: 'center center', end: '+=1100', scrub: 0.6, anticipatePin: 1, animation: tl, onUpdate: (s) => { relHi = s.progress > 0.92 } })
+  })
+
+  if (R) return
+
+  // 문장 등장
+  gsap.from('.mp-up', { y: 28, opacity: 0, duration: 0.9, stagger: 0.08, ease: 'power3.out', scrollTrigger: { trigger: '.mp-head', start: 'top 82%' } })
+  gsap.from('.mp-up2', { y: 28, opacity: 0, duration: 0.9, stagger: 0.08, ease: 'power3.out', scrollTrigger: { trigger: '#mp-rel', start: 'top 85%' } })
+  gsap.from('.mp-list', { y: 24, opacity: 0, duration: 0.9, ease: 'power3.out', scrollTrigger: { trigger: box, start: 'top 80%' } })
+  ScrollTrigger.create({ trigger: box, start: 'top 78%', once: true, onEnter: () => { revealAt = clock; nextSpawn = clock + 1100; wake() } })
+
+  new IntersectionObserver(([e]) => { mapOn = e.isIntersecting; if (mapOn) wake() }).observe(box)
+  new IntersectionObserver(([e]) => { relOn = e.isIntersecting; if (relOn) wake() }).observe(card)
+})()
+</script>
+
+<style>
+  /* ===== 기능 요약: 한 장의 카드를 1px 선으로 나눈 벤토 ===== */
+  .ft { padding: 168px 0 128px; }
+  .ft-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; margin-bottom: 64px; }
+  .ft-head .h2 { margin-top: 18px; }
+  .ft-head .lead { max-width: 380px; padding-bottom: 8px; }
+  .ft-line { display: block; }
+  .ft-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
+  .ft-w > span { display: inline-block; will-change: transform; }
+
+  .ft-grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 344px; gap: 1px; background: var(--line); overflow: hidden; }
+  .ft-tile { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 28px 28px 26px; background: var(--panel); overflow: hidden; }
+  .ft-a { grid-column: span 8; }
+  .ft-b { grid-column: span 4; grid-row: span 2; }
+  .ft-c, .ft-d { grid-column: span 4; }
+  .ft-e { grid-column: span 7; }
+  .ft-f { grid-column: span 5; }
+  .ft-th { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .ft-th h3 { font-size: 19px; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; }
+  .ft-tag { font: 500 10px var(--mono); letter-spacing: .14em; color: var(--faint); transition: color 160ms; }
+  .ft-tile:hover .ft-tag { color: var(--accent-ink); }
+  .ft-td { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--mid); }
+  .ft-viz { margin-top: auto; padding-top: 22px; }
+  .ft-dim { color: var(--faint); font-size: 12px; }
+  .ft-dim b { font-weight: 500; color: var(--ink-2); }
+
+  /* 01 실시간 수집 */
+  .ft-live-top { display: flex; align-items: center; justify-content: space-between; }
+  .ft-sig i { position: relative; }
+  .ft-sig i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: currentColor; animation: ft-ping 2.2s ease-out infinite; }
+  @keyframes ft-ping { from { transform: scale(1); opacity: .7; } to { transform: scale(3.2); opacity: 0; } }
+  .ft-count { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 18px; }
+  #ft-count { display: block; font-size: 54px; font-weight: 600; line-height: 1; letter-spacing: -.04em; }
+  .ft-count small { display: block; margin-top: 8px; font-size: 12px; color: var(--mid); }
+  .ft-rate { text-align: right; font-size: 12px; color: var(--mid); }
+  .ft-rate b { display: block; font: 600 18px var(--mono); color: var(--ink); letter-spacing: -.02em; }
+  .ft-spark { height: 64px; margin-top: 18px; overflow: hidden; border-bottom: 1px solid var(--line-strong); -webkit-mask-image: linear-gradient(90deg, transparent, #000 28%); mask-image: linear-gradient(90deg, transparent, #000 28%); }
+  .ft-spark-track { display: flex; height: 100%; width: calc(100% * 61 / 60); }
+  .ft-spark i { flex: 1; margin: 0 1.5px; background: var(--accent); opacity: .75; transform-origin: bottom; }
+  .ft-spark i:nth-last-child(2) { background: var(--accent-ink); opacity: 1; }
+  .ft-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--faint); }
+
+  /* 02 탐지 규칙 */
+  .ft-b .ft-viz { display: flex; flex-direction: column; flex: 1; }
+  .ft-rstat { display: flex; gap: 28px; padding-bottom: 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--mid); }
+  .ft-rstat b { display: block; font: 600 22px var(--mono); color: var(--ink); letter-spacing: -.02em; }
+  .ft-rules { flex: 1; display: grid; grid-auto-rows: minmax(44px, 1fr); }
+  .ft-rules li { position: relative; isolation: isolate; display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .ft-rules li:last-child { border-bottom: 0; }
+  .ft-rules [data-sev='crit'] { --sev: var(--crit); }
+  .ft-rules [data-sev='high'] { --sev: var(--high); }
+  .ft-rules [data-sev='med'] { --sev: var(--med); }
+  .ft-bar { position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px; background: var(--sev); opacity: .35; }
+  .ft-flash { position: absolute; inset: 0; z-index: -1; background: var(--raised); opacity: 0; }
+  .ft-rid { font: 500 12px var(--mono); color: var(--accent-ink); opacity: .7; }
+  .ft-rname { overflow: hidden; color: var(--ink-2); white-space: nowrap; text-overflow: ellipsis; }
+  .ft-rules b { display: inline-block; min-width: 2ch; text-align: right; font-size: 13px; font-weight: 600; }
+
+  /* 03 위협 추이 */
+  .ft-ctop { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+  .ft-ctop b { display: block; font: 600 30px/1 var(--mono); letter-spacing: -.03em; }
+  .ft-ctop small { display: block; margin-top: 6px; font-size: 12px; color: var(--mid); }
+  .ft-legend { display: flex; gap: 10px; font-size: 11px; color: var(--mid); }
+  .ft-legend span::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--c); vertical-align: 1px; }
+  .ft-cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 120px; align-items: end; background: repeating-linear-gradient(to top, var(--line) 0 1px, transparent 1px 40px); }
+  .ft-stack { display: flex; flex-direction: column-reverse; width: 100%; max-width: 24px; margin: 0 auto; transform-origin: bottom; }
+  .ft-stack i { display: block; }
+  .ft-stack i + i { border-bottom: 2px solid var(--panel); }
+  .ft-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 8px; text-align: center; font-size: 10px; color: var(--faint); }
+  .ft-days span:last-child { color: var(--ink); }
+
+  /* 04 원격 조치 */
+  .ft-proc { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 16px; border-radius: 10px; background: var(--raised); }
+  .ft-proc::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; background: var(--crit); }
+  .ft-pname { position: relative; display: block; width: max-content; font: 600 13px var(--mono); }
+  .ft-strike { position: absolute; left: -2px; right: -2px; top: 52%; height: 1px; background: var(--ink-2); transform: scaleX(0); transform-origin: left; }
+  .ft-proc small { display: block; margin-top: 2px; font: 400 11px var(--mono); color: var(--faint); }
+  .ft-sts { display: grid; margin-left: auto; justify-items: end; }
+  .ft-sts > * { grid-area: 1 / 1; }
+  .ft-kill-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .ft-kill { flex: none; display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--bg); font-size: 13px; font-weight: 600; }
+  .ft-prog { flex: 1; height: 2px; background: var(--line-strong); overflow: hidden; }
+  .ft-prog i { display: block; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+  .ft-log { list-style: none; margin-top: 12px; font-size: 12px; line-height: 1.8; color: var(--mid); }
+  .ft-log span { margin-right: 10px; font: 400 11px var(--mono); color: var(--faint); }
+
+  /* 05 IP·도메인 조회 */
+  .ft-q { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px 0 14px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--bg); font: 500 14px var(--mono); }
+  .ft-q svg { flex: none; }
+  .ft-caret { width: 2px; height: 18px; margin-left: -8px; background: var(--accent-ink); animation: ft-blink 1s steps(1) infinite; }
+  @keyframes ft-blink { 50% { opacity: 0; } }
+  .ft-q kbd { margin-left: auto; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line-strong); font: 500 10px var(--mono); color: var(--faint); }
+  .ft-res { margin-top: 10px; padding: 14px 16px 0; border-radius: 10px; background: var(--raised); overflow: hidden; }
+  .ft-res-h { display: flex; align-items: center; gap: 10px; }
+  .ft-res-h > b { font: 600 14px var(--mono); }
+  .ft-res-h em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--mid); }
+  .ft-res-h em b { margin-left: 4px; font: 600 13px var(--mono); color: var(--ink); }
+  .ft-facts { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 12px; margin: 14px 0; }
+  .ft-facts dt { font-size: 11px; color: var(--faint); }
+  .ft-facts dd { margin-top: 3px; font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .ft-meter { height: 2px; margin: 0 -16px; background: var(--line-strong); }
+  .ft-meter i { display: block; height: 100%; background: var(--crit); transform: scaleX(.92); transform-origin: left; }
+
+  /* 06 알림 연동 */
+  .ft-chat { border-radius: 10px; border: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+  .ft-chat-h { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); font: 600 12px var(--mono); color: var(--ink-2); }
+  .ft-chat-h .badge { margin-left: auto; }
+  .ft-msgs { display: flex; flex-direction: column; justify-content: flex-end; height: 150px; padding: 0 14px 12px; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 34%); mask-image: linear-gradient(transparent, #000 34%); }
+  .ft-msgs-in { display: grid; gap: 12px; }
+  .ft-msg { display: grid; grid-template-columns: 24px 1fr; gap: 10px; font-size: 13px; line-height: 1.5; }
+  .ft-msg img { width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50%; background: #fff; }
+  .ft-msg p { color: var(--ink-2); }
+  .ft-msg p:first-child { font-size: 12px; color: var(--ink); font-weight: 700; }
+  .ft-msg p:first-child span { margin-left: 6px; font: 400 10px var(--mono); color: var(--faint); }
+  .ft-msg .badge { height: 20px; margin-right: 6px; vertical-align: 1px; }
+
+  /* ===== 마지막 CTA ===== */
+  .ft-cta { position: relative; display: grid; place-items: center; min-height: 100vh; padding: 160px 0; overflow: hidden; text-align: center; }
+  .ft-dots { position: absolute; inset: 0; width: 100%; height: 100%; -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, rgba(0,0,0,.4) 10%, #000 48%, transparent 100%); mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, rgba(0,0,0,.4) 10%, #000 48%, transparent 100%); }
+  .ft-cta-in { position: relative; }
+  .ft-big { font-size: clamp(42px, 7.2vw, 104px); font-weight: 700; line-height: 1.14; letter-spacing: -.045em; }
+  .ft-cta .lead { margin: 30px auto 0; }
+  .ft-btns { display: flex; justify-content: center; gap: 10px; margin-top: 40px; }
+  .ft-btns svg { transition: transform 160ms; }
+  .ft-btns .btn:hover svg { transform: translateX(3px); }
+
+  /* ===== 푸터 ===== */
+  .ft-foot { border-top: 1px solid var(--line); padding: 36px 0 44px; }
+  .ft-foot-in { display: flex; align-items: center; gap: 44px; }
+  .ft-links { display: flex; gap: 24px; font-size: 14px; color: var(--mid); }
+  .ft-links a { transition: color 160ms; }
+  .ft-links a:hover { color: var(--ink); }
+  .ft-copy { margin-left: auto; font-size: 12px; color: var(--faint); }
+
+  @media (max-width: 1080px) {
+    .ft-grid { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
+    .ft-tile { min-height: 320px; grid-column: auto; grid-row: auto; }
+    .ft-a, .ft-e, .ft-f { grid-column: span 2; }
+    .ft-b { grid-row: span 2; }
+  }
+  @media (max-width: 640px) {
+    .ft { padding: 112px 0 88px; }
+    .ft-head { grid-template-columns: 1fr; gap: 18px; margin-bottom: 40px; }
+    .ft-grid { grid-template-columns: 1fr; }
+    .ft-a, .ft-b, .ft-e, .ft-f { grid-column: auto; grid-row: auto; }
+    .ft-tile { min-height: 0; padding: 24px 20px 22px; }
+    .ft-viz { padding-top: 24px; }
+    .ft-tag { display: none; }
+    #ft-count { font-size: 38px; }
+    .ft-rules li:nth-child(n + 7) { display: none; }
+    .ft-facts { grid-template-columns: 1fr 1fr; justify-content: stretch; }
+    .ft-res-h em { display: none; }
+    .ft-cta { min-height: 0; padding: 136px 0 120px; }
+    .ft-cta .lead { font-size: 16px; }
+    .ft-foot-in { flex-wrap: wrap; gap: 20px 28px; }
+    .ft-links { order: 3; width: 100%; gap: 20px; }
+    .ft-copy { margin-left: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ft-sig i::after, .ft-caret { animation: none; }
+  }
+</style>
+
+<section id="features" class="ft">
+  <div class="wrap">
+    <div class="ft-head">
+      <div>
+        <p class="eyebrow">FEATURES</p>
+        <h2 class="h2"><span class="ft-line">관제에 필요한 건</span><span class="ft-line">다 있어요</span></h2>
+      </div>
+      <p class="lead">수집, 탐지, 조치, 알림까지. 여러 도구를 오가지 않고 콘솔 하나에서 끝나요.</p>
+    </div>
+
+    <div class="ft-grid card">
+      <!-- 01 실시간 수집 -->
+      <article class="ft-tile ft-a">
+        <div class="ft-th"><h3>모든 이벤트를 실시간으로 모아요</h3><span class="ft-tag">LIVE</span></div>
+        <p class="ft-td">프로세스, 네트워크, 로그인 기록이 에이전트에서 바로 들어와요.</p>
+        <div class="ft-viz" aria-hidden="true">
+          <div class="ft-live-top">
+            <span class="badge good ft-sig"><i></i>LIVE SIGNAL</span>
+            <span class="ft-dim">에이전트 <b class="mono">128</b>대 연결</span>
+          </div>
+          <div class="ft-count">
+            <div><b class="mono" id="ft-count">2,481,936</b><small>오늘 수집한 이벤트</small></div>
+            <div class="ft-rate">초당 이벤트<b id="ft-rate">1,240</b></div>
+          </div>
+          <div class="ft-spark"><div class="ft-spark-track" id="ft-spark"></div></div>
+          <div class="ft-axis"><span>60초 전</span><span>지금</span></div>
+        </div>
+      </article>
+
+      <!-- 02 탐지 규칙 -->
+      <article class="ft-tile ft-b">
+        <div class="ft-th"><h3>공격 기법마다 규칙이 있어요</h3><span class="ft-tag">ATT&amp;CK</span></div>
+        <p class="ft-td">MITRE ATT&amp;CK 기준 규칙에 걸리면 바로 표시돼요.</p>
+        <div class="ft-viz" aria-hidden="true">
+          <div class="ft-rstat">
+            <div>활성 규칙<b class="mono">312</b></div>
+            <div>오늘 매칭<b class="mono" id="ft-hits">47</b></div>
+          </div>
+          <ul class="ft-rules">
+            <li data-sev="crit"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1003.001</span><span class="ft-rname">LSASS 메모리 덤프</span><b class="mono">4</b></li>
+            <li data-sev="high"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1059.001</span><span class="ft-rname">PowerShell 인코딩 실행</span><b class="mono">9</b></li>
+            <li data-sev="high"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1547.001</span><span class="ft-rname">레지스트리 자동 실행</span><b class="mono">6</b></li>
+            <li data-sev="crit"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1078</span><span class="ft-rname">정상 계정 악용</span><b class="mono">3</b></li>
+            <li data-sev="med"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1110</span><span class="ft-rname">무차별 대입 로그인</span><b class="mono">11</b></li>
+            <li data-sev="high"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1055</span><span class="ft-rname">프로세스 인젝션</span><b class="mono">2</b></li>
+            <li data-sev="crit"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1486</span><span class="ft-rname">파일 대량 암호화</span><b class="mono">1</b></li>
+            <li data-sev="med"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1021.001</span><span class="ft-rname">원격 데스크톱 접속</span><b class="mono">5</b></li>
+            <li data-sev="high"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1566.001</span><span class="ft-rname">피싱 첨부파일 실행</span><b class="mono">2</b></li>
+            <li data-sev="med"><i class="ft-bar"></i><em class="ft-flash"></em><span class="ft-rid">T1105</span><span class="ft-rname">외부 도구 내려받기</span><b class="mono">4</b></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- 03 위협 추이 -->
+      <article class="ft-tile ft-c">
+        <div class="ft-th"><h3>위협 흐름을 한눈에</h3><span class="ft-tag">7D</span></div>
+        <p class="ft-td">날짜별 탐지를 심각도로 쌓아 보여줘요.</p>
+        <div class="ft-viz" aria-hidden="true">
+          <div class="ft-ctop">
+            <div><b id="ft-total">127</b><small>이번 주 탐지</small></div>
+            <div class="ft-legend"><span style="--c: var(--crit)">심각</span><span style="--c: var(--high)">높음</span><span style="--c: var(--med)">보통</span></div>
+          </div>
+          <div class="ft-cols" id="ft-cols"></div>
+          <div class="ft-days mono"><span>11.05</span><span>11.06</span><span>11.07</span><span>11.08</span><span>11.09</span><span>11.10</span><span>오늘</span></div>
+        </div>
+      </article>
+
+      <!-- 04 원격 조치 -->
+      <article class="ft-tile ft-d">
+        <div class="ft-th"><h3>버튼 하나로 원격 조치</h3><span class="ft-tag">ACTION</span></div>
+        <p class="ft-td">의심 프로세스를 콘솔에서 바로 종료해요.</p>
+        <div class="ft-viz ft-act" aria-hidden="true">
+          <div class="ft-proc">
+            <div><span class="ft-pname">powershell.exe<i class="ft-strike"></i></span><small>PID 4128 · WIN-FIN-02</small></div>
+            <div class="ft-sts">
+              <span class="badge high ft-st"><i></i>실행 중</span>
+              <span class="badge low ft-st"><i></i>요청 중</span>
+              <span class="badge good ft-st"><i></i>종료 완료</span>
+            </div>
+          </div>
+          <div class="ft-kill-row"><span class="ft-kill">프로세스 종료</span><div class="ft-prog"><i></i></div></div>
+          <ol class="ft-log">
+            <li><span>14:02:11</span>종료 요청 전송</li>
+            <li><span>14:02:12</span>에이전트 수신</li>
+            <li><span>14:02:13</span>PID 4128 종료 확인</li>
+          </ol>
+        </div>
+      </article>
+
+      <!-- 05 IP·도메인 조회 -->
+      <article class="ft-tile ft-e">
+        <div class="ft-th"><h3>수상한 IP는 바로 조회</h3><span class="ft-tag">INTEL</span></div>
+        <p class="ft-td">IP나 도메인을 넣으면 평판, 국가, 처음 본 날까지 한 번에 보여줘요.</p>
+        <div class="ft-viz" aria-hidden="true">
+          <div class="ft-q">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--faint)" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5" stroke-linecap="round"/></svg>
+            <span id="ft-q">185.220.101.4</span><i class="ft-caret"></i>
+            <kbd>Enter</kbd>
+          </div>
+          <div class="ft-res">
+            <div class="ft-res-h"><b>185.220.101.4</b><span class="badge crit"><i></i>악성</span><em>위험 점수<b>92</b><span class="mono">/100</span></em></div>
+            <dl class="ft-facts">
+              <div><dt>국가</dt><dd>독일 DE</dd></div>
+              <div><dt>처음 본 날</dt><dd class="mono">2026.03.14</dd></div>
+              <div><dt>신고</dt><dd><span class="mono">1,203</span>건</dd></div>
+              <div><dt>분류</dt><dd>Tor 출구 노드</dd></div>
+            </dl>
+            <div class="ft-meter"><i></i></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 06 알림 연동 -->
+      <article class="ft-tile ft-f">
+        <div class="ft-th"><h3>알림은 쓰던 메신저로</h3><span class="ft-tag">WEBHOOK</span></div>
+        <p class="ft-td">심각한 탐지는 웹훅으로 팀 채널에 바로 보내요.</p>
+        <div class="ft-viz" aria-hidden="true">
+          <div class="ft-chat">
+            <div class="ft-chat-h"># 보안-알림<span class="badge good"><i></i>연결됨</span></div>
+            <div class="ft-msgs"><div class="ft-msgs-in" id="ft-msgs"></div></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="start" class="ft-cta">
+  <canvas class="ft-dots" aria-hidden="true"></canvas>
+  <div class="wrap ft-cta-in">
+    <h2 class="ft-big"><span class="ft-line">오늘 들어온 위협,</span><span class="ft-line">지금 바로 확인하세요</span></h2>
+    <p class="lead">데모 화면에서 탐지부터 조치까지 직접 눌러보세요.</p>
+    <div class="ft-btns">
+      <a class="btn primary" href="#">데모 보기<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+      <a class="btn" href="#">로그인</a>
+    </div>
+  </div>
+</section>
+
+<footer class="ft-foot">
+  <div class="wrap ft-foot-in">
+    <a class="logo" href="#"><img src="logo.png" alt="" />EDRdog</a>
+    <nav class="ft-links" aria-label="푸터"><a href="#flow">동작 방식</a><a href="#map">위협 지도</a><a href="#features">기능</a><a href="#">로그인</a></nav>
+    <p class="mono ft-copy">© 2026 EDRdog</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const R = window.REDUCE
+  const $ = (s, r = document) => r.querySelector(s)
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)]
+  const fmt = n => Math.round(n).toLocaleString('en-US')
+  const rand = (a, b) => a + Math.random() * (b - a)
+
+  // 줄을 단어 span 으로 나눈다 (문구는 이 파일의 고정 텍스트)
+  const split = line => {
+    line.innerHTML = line.textContent.trim().split(/\s+/).map(w => `<span class="ft-w"><span>${w}</span></span>`).join(' ')
+    return $$('.ft-w > span', line)
+  }
+
+  // 보이기 시작하면 intro 한 번, 보이는 동안만 play
+  const live = (el, { intro, play, pause }) => ScrollTrigger.create({
+    trigger: el, start: 'top 85%', end: 'bottom top',
+    onToggle: s => { if (s.isActive) { if (intro) { intro(); intro = null } play && play() } else pause && pause() }
+  })
+  const ticker = (fn, ms) => { let id = 0; return { play: () => { id ||= setInterval(fn, ms) }, pause: () => { clearInterval(id); id = 0 } } }
+
+  // ----- 01 실시간 수집: 카운터 + 초당 막대 -----
+  const count = $('#ft-count'), rate = $('#ft-rate'), spark = $('#ft-spark'), N = 60
+  let total = 2481936, v = .5
+  const nextV = () => { v = Math.min(.9, Math.max(.2, v + rand(-.16, .16))); return Math.random() < .07 ? rand(.88, 1) : v }
+  spark.innerHTML = '<i></i>'.repeat(N + 1)
+  const bars = $$('i', spark)
+  bars.forEach(b => gsap.set(b, { scaleY: nextV() }))
+  const scroll = gsap.to(spark, {
+    xPercent: -100 / (N + 1), duration: 1, ease: 'none', repeat: -1, paused: true,
+    onRepeat() { const b = spark.firstElementChild, val = nextV(); spark.appendChild(b); gsap.set(b, { scaleY: val }); rate.textContent = fmt(val * 1800) }
+  })
+  const tick = ticker(() => { total += rand(40, 190); count.textContent = fmt(total) }, 140)
+
+  // ----- 02 탐지 규칙: 무작위 규칙이 매칭된다 -----
+  const rules = $$('.ft-rules li'), hits = $('#ft-hits')
+  const hit = ticker(() => {
+    const li = rules[Math.floor(Math.random() * rules.length)], n = $('b', li)
+    if (getComputedStyle(li).display === 'none') return
+    n.textContent = +n.textContent + 1
+    hits.textContent = +hits.textContent + 1
+    gsap.timeline()
+      .fromTo($('.ft-flash', li), { opacity: 1 }, { opacity: 0, duration: 1.6, ease: 'power2.out' }, 0)
+      .fromTo($('.ft-bar', li), { opacity: 1, scaleY: 1.6 }, { opacity: .35, scaleY: 1, duration: 1.8, ease: 'power2.out' }, 0)
+      .fromTo($('.ft-rid', li), { opacity: 1 }, { opacity: .7, duration: 1.8 }, 0)
+      .fromTo(n, { yPercent: -70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .45, ease: 'back.out(2.4)' }, 0)
+  }, 1100)
+
+  // ----- 03 위협 추이: 심각도 스택 막대 -----
+  const days = [[2, 4, 7], [1, 5, 9], [3, 4, 6], [2, 7, 10], [4, 6, 8], [3, 8, 11], [5, 10, 12]]
+  const cols = $('#ft-cols')
+  cols.innerHTML = days.map(([c, h, m]) => {
+    const seg = (k, x) => `<i style="height:${x * 4}px;background:var(--${k})"></i>`
+    return `<div class="ft-stack">${seg('med', m)}${seg('high', h)}${seg('crit', c)}</div>`
+  }).join('')
+
+  // ----- 04 원격 조치: 종료 요청 → 요청 중 → 종료 완료 반복 -----
+  const [sRun, sReq, sDone] = $$('.ft-st'), logs = $$('.ft-log li')
+  const prog = $('.ft-prog i'), strike = $('.ft-strike'), pname = $('.ft-pname')
+  const act = gsap.timeline({ repeat: -1, paused: true, defaults: { duration: .35, ease: 'power2.out' } })
+    .set([sReq, sDone], { opacity: 0, y: 6 }, 0).set(sRun, { opacity: 1, y: 0 }, 0)
+    .set(logs, { opacity: 0, y: 4 }, 0).set(prog, { scaleX: 0, opacity: 1 }, 0)
+    .set(strike, { scaleX: 0, opacity: 1 }, 0).set(pname, { opacity: 1 }, 0)
+    .to('.ft-kill', { scale: .94, duration: .12, yoyo: true, repeat: 1 }, .9)
+    .to(sRun, { opacity: 0, y: -6 }, 1.15).to(sReq, { opacity: 1, y: 0 }, 1.15)
+    .to(logs[0], { opacity: 1, y: 0 }, 1.15)
+    .to(prog, { scaleX: 1, duration: 1.4, ease: 'power1.inOut' }, 1.15)
+    .to(logs[1], { opacity: 1, y: 0 }, 1.9)
+    .to(sReq, { opacity: 0, y: -6 }, 2.6).to(sDone, { opacity: 1, y: 0 }, 2.6)
+    .to(logs[2], { opacity: 1, y: 0 }, 2.6)
+    .to(strike, { scaleX: 1, duration: .5, ease: 'power3.inOut' }, 2.6).to(pname, { opacity: .45 }, 2.7)
+    .to([...logs, prog, strike], { opacity: 0, duration: .4 }, 5.4)
+    .to(sDone, { opacity: 0, y: -6 }, 5.4).to(sRun, { opacity: 1, y: 0 }, 5.6).to(pname, { opacity: 1 }, 5.6)
+    .set({}, {}, 6.2)
+
+  // ----- 05 IP 조회: 입력 → 결과 카드 반복 -----
+  const q = $('#ft-q'), ip = q.textContent, res = $('.ft-res'), typed = { n: 0 }
+  const draw = () => { q.textContent = ip.slice(0, typed.n) }
+  const look = gsap.timeline({ repeat: -1, paused: true })
+    .call(() => { typed.n = 0; draw() }, null, 0)
+    .set(res, { opacity: 0, y: 10 }, 0)
+    .to(typed, { n: ip.length, duration: 1.1, ease: 'none', snap: { n: 1 }, onUpdate: draw }, .4)
+    .to(res, { opacity: 1, y: 0, duration: .55, ease: 'power3.out' }, 1.8)
+    .from('.ft-facts > div', { opacity: 0, y: 8, stagger: .08, duration: .4, ease: 'power2.out' }, 1.95)
+    .fromTo('.ft-meter i', { scaleX: 0 }, { scaleX: .92, duration: 1, ease: 'power3.out' }, 2)
+    .to(res, { opacity: 0, y: -6, duration: .4 }, 6)
+    .to(typed, { n: 0, duration: .4, ease: 'none', snap: { n: 1 }, onUpdate: draw }, 6)
+    .set({}, {}, 6.8)
+
+  // ----- 06 알림 연동: 메시지가 아래에서 쌓인다 -----
+  const box = $('#ft-msgs')
+  const msgs = [
+    ['crit', '심각', 'WIN-FIN-02 에서 LSASS 메모리 덤프 탐지'],
+    ['high', '높음', 'DEV-07 에서 인코딩된 PowerShell 실행'],
+    ['med', '보통', 'VPN-GW 로그인 실패 38회'],
+    ['good', '조치', 'WIN-FIN-02 프로세스 종료 완료']
+  ]
+  let mi = 0, mt = 14 * 60 + 2
+  const push = animate => {
+    const [k, label, text] = msgs[mi++ % msgs.length]
+    mt += 1 + (mi % 3)
+    const el = document.createElement('div')
+    el.className = 'ft-msg'
+    el.innerHTML = `<img src="logo.png" alt="" /><div><p>EDRdog<span>${String(Math.floor(mt / 60) % 24).padStart(2, '0')}:${String(mt % 60).padStart(2, '0')}</span></p><p><span class="badge ${k}"><i></i>${label}</span>${text}</p></div>`
+    box.appendChild(el)
+    while (box.children.length > 4) box.firstElementChild.remove()
+    if (animate) {
+      gsap.fromTo(box, { y: el.offsetHeight + 12 }, { y: 0, duration: .7, ease: 'power3.out' })
+      gsap.from(el, { opacity: 0, duration: .5, delay: .15 })
+    }
+  }
+  const chat = ticker(() => push(true), 2600)
+
+  // ----- 마지막 CTA 뒤 점 필드: 점 하나가 엔드포인트, 가끔 퍼지며 켜진다 -----
+  const cv = $('.ft-dots'), ctx = cv.getContext('2d'), G = 28
+  const tok = getComputedStyle(document.documentElement)
+  const cBase = tok.getPropertyValue('--line-strong').trim(), cLit = tok.getPropertyValue('--accent-ink').trim()
+  let W = 0, H = 0, lit = [], raf = 0, nextRipple = 0
+  const size = () => {
+    const d = Math.min(devicePixelRatio || 1, 2), r = cv.getBoundingClientRect()
+    W = r.width; H = r.height; cv.width = W * d; cv.height = H * d
+    ctx.setTransform(d, 0, 0, d, 0, 0)
+  }
+  const base = () => {
+    ctx.clearRect(0, 0, W, H)
+    ctx.fillStyle = cBase
+    for (let y = G / 2; y < H; y += G) for (let x = G / 2; x < W; x += G) ctx.fillRect(x - 1, y - 1, 2, 2)
+  }
+  const ripple = now => {
+    const cx = Math.floor(rand(0, W / G)), cy = Math.floor(rand(0, H / G))
+    for (let dx = -4; dx <= 4; dx++) for (let dy = -4; dy <= 4; dy++) {
+      const dist = Math.hypot(dx, dy)
+      if (dist <= 4) lit.push({ x: (cx + dx) * G + G / 2, y: (cy + dy) * G + G / 2, t: now + dist * 120, a: 1 - dist / 5 })
+    }
+  }
+  const frame = now => {
+    base()
+    if (now > nextRipple) { ripple(now); nextRipple = now + rand(700, 1300) }
+    if (Math.random() < .12) lit.push({ x: Math.floor(rand(0, W / G)) * G + G / 2, y: Math.floor(rand(0, H / G)) * G + G / 2, t: now, a: .8 })
+    ctx.fillStyle = cLit
+    lit = lit.filter(p => {
+      const k = (now - p.t) / 1800
+      if (k < 0) return true
+      if (k > 1) return false
+      ctx.globalAlpha = Math.sin(Math.PI * k) * p.a
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2); ctx.fill()
+      return true
+    })
+    ctx.globalAlpha = 1
+    raf = requestAnimationFrame(frame)
+  }
+  size(); base()
+  addEventListener('resize', () => { size(); base() })
+
+  // ----- 움직임 줄이기: 최종 상태만 보여준다 -----
+  if (R) {
+    push(false); push(false); push(false)
+    act.seek(3.4, false)
+    look.seek(3.6, false)
+    return
+  }
+
+  // 제목: 단어가 아래에서 올라온다
+  const head = $$('.ft-head .ft-line').flatMap(split)
+  gsap.from(head, { yPercent: 110, duration: 1, ease: 'power4.out', stagger: .07, scrollTrigger: { trigger: '.ft-head', start: 'top 82%' } })
+  gsap.from('.ft-head .eyebrow, .ft-head .lead', { opacity: 0, y: 16, duration: .8, ease: 'power3.out', stagger: .15, scrollTrigger: { trigger: '.ft-head', start: 'top 82%' } })
+  gsap.from('.ft-grid', { y: 64, opacity: 0, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: '.ft-grid', start: 'top 92%' } })
+
+  // 타일: 내용이 차례로 떠오르고 미니 화면이 돈다
+  const reveal = t => gsap.fromTo(t.children, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .8, ease: 'power3.out', stagger: .08 })
+  $$('.ft-tile').forEach(t => gsap.set(t.children, { opacity: 0 }))
+  live('.ft-a', {
+    intro() {
+      reveal($('.ft-a'))
+      const from = { n: total - 64000 }
+      gsap.to(from, { n: total, duration: 1.6, ease: 'power3.out', onUpdate: () => { count.textContent = fmt(from.n) } })
+      gsap.from(bars, { scaleY: 0, duration: .9, ease: 'power3.out', stagger: .012 })
+    },
+    play: () => { scroll.play(); setTimeout(tick.play, 1600) },
+    pause: () => { scroll.pause(); tick.pause() }
+  })
+  live('.ft-b', {
+    intro() { reveal($('.ft-b')); gsap.from(rules, { opacity: 0, x: -10, duration: .5, ease: 'power2.out', stagger: .05, delay: .2 }) },
+    play: hit.play, pause: hit.pause
+  })
+  live('.ft-c', {
+    intro() {
+      reveal($('.ft-c'))
+      gsap.from('.ft-stack', { scaleY: 0, duration: 1, ease: 'power4.out', stagger: .08, delay: .15 })
+      const o = { n: 0 }, el = $('#ft-total'), end = +el.textContent
+      gsap.to(o, { n: end, duration: 1.4, ease: 'power3.out', delay: .15, onUpdate: () => { el.textContent = Math.round(o.n) } })
+    }
+  })
+  live('.ft-d', { intro: () => reveal($('.ft-d')), play: () => act.play(), pause: () => act.pause() })
+  live('.ft-e', { intro: () => reveal($('.ft-e')), play: () => look.play(), pause: () => look.pause() })
+  live('.ft-f', { intro() { reveal($('.ft-f')); push(false); push(false) }, play: chat.play, pause: chat.pause })
+
+  // CTA: 스크롤에 맞춰 단어가 차례로 올라온다
+  const big = $$('.ft-big .ft-line').flatMap(split)
+  gsap.fromTo(big, { yPercent: 105, opacity: 0 }, { yPercent: 0, opacity: 1, ease: 'power3.out', stagger: .12, scrollTrigger: { trigger: '.ft-big', start: 'top 88%', end: 'top 42%', scrub: .7 } })
+  gsap.from('.ft-cta .lead, .ft-btns', { opacity: 0, y: 20, duration: .9, ease: 'power3.out', stagger: .12, scrollTrigger: { trigger: '.ft-cta .lead', start: 'top 90%' } })
+  gsap.fromTo(cv, { scale: 1.14 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '#start', start: 'top bottom', end: 'center center', scrub: true } })
+  ScrollTrigger.create({
+    trigger: '#start', start: 'top bottom', end: 'bottom top',
+    onToggle: s => { cancelAnimationFrame(raf); if (s.isActive) raf = requestAnimationFrame(frame); else base() }
+  })
+})()
+</script>
+
+</main>
+</body>
+</html>
