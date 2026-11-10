@@ -41,4 +41,4 @@
 
 | 항목 | 위치 | 영향 | 발견일 |
 |---|---|---|---|
-| 콘솔 토큰이 `DESIGN.md` 와 다르다 | `src/index.css` | 콘솔은 옛 토큰(`--surface`, `--panel` 의미 차이, 곡률 2~4px)이고 `DESIGN.md` 2장, 4장은 미드나잇/클라우드, 곡률 14px 소프트다. 랜딩만 `src/components/landing/landing.css` 의 `.landing` 안에 새 값을 따로 두었다(ADR 014). 콘솔을 옮기면 `.landing` 의 토큰 정의를 `:root` 로 올리고 중복을 지운다 | 2026-11-11 |
+| 콘솔과 랜딩의 토큰 변수 이름이 다르다 | `src/index.css`, `src/components/landing/landing.css` | #104 에서 콘솔 값은 `DESIGN.md`(미드나잇/클라우드, 소프트 곡률)로 옮겼다. 하지만 콘솔은 옛 이름(`--surface`=패널, `--panel`=hover, `--line`=진한 선)을 쓰고 랜딩은 `DESIGN.md` 이름(`--panel`=패널, `--line`=구분선)이라 같은 이름의 뜻이 반대다. 그래서 `.landing` 정의를 `:root` 로 올릴 수 없다. 콘솔 변수 이름을 `DESIGN.md` 이름으로 바꾸면(전체 화면 치환) 중복을 지울 수 있다 | 2026-11-11 |

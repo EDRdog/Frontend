@@ -18,6 +18,7 @@ EDR 대시보드 프론트엔드. 백엔드(`EDRdog/Backend`)의 조회 API 를 
 - **`main` 으로 직접 PR 하지 않는다.** 작업은 `dev` 에서 시작하고, `main` 은 배포용이다. 진행 순서는 이슈 → 브랜치 → PR.
 - **커밋과 푸시는 사용자가 요청할 때만 한다.**
 - **필요해지기 전에 미리 만들지 않는다.** 과설계 금지.
+- **`DESIGN.md` 에 없는 색, 곡률, 글꼴을 쓰지 않는다.** 필요하면 `DESIGN.md` 를 먼저 고친다.
 - **번들을 키우는 의존성을 말없이 추가하지 않는다.** Vercel Hobby 플랜 한도 안에서 돌아가야 한다. 지금도 echarts 청크가 1.1MB(gzip 377KB)다.
 - 위험 명령(`rm -rf`, `git push --force`, `git reset --hard`)은 직접 실행하지 말고 사용자에게 요청. `scripts/guard.sh` 가 막는다.
 
@@ -30,6 +31,8 @@ EDR 대시보드 프론트엔드. 백엔드(`EDRdog/Backend`)의 조회 API 를 
 ## 문서 지도
 
 - 구조, 레이어, 의존 방향: `ARCHITECTURE.md`
+- 디자인 시스템(색, 글꼴, 모양, 컴포넌트, 모션): `DESIGN.md`
+- 디자인 시안 HTML: `docs/design-docs/previews/` (화면을 바꾸면 시안을 먼저 만들고 확인받은 뒤 코드로 옮긴다)
 - 무엇을, 왜 (PRD): `docs/product-specs/`
 - 검증 가능한 수용 기준 (ERD, Engineering Requirements Document): `docs/requirements/`
 - 왜 이렇게 정했나 (ADR): `docs/design-docs/decisions/`

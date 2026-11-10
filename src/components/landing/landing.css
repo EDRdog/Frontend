@@ -1,6 +1,6 @@
 /*
   랜딩 전용 스타일. 시안(docs/design-docs/previews/landing-v2*.html)을 그대로 옮겼다.
-  토큰은 DESIGN.md 2장 값이고, 콘솔 토큰(src/index.css)이 아직 옛 값이라 .landing 안에서만 정의한다(ADR 014).
+  토큰은 DESIGN.md 2장 값이다. 콘솔(src/index.css)도 같은 값이지만 변수 이름의 뜻이 달라(--panel, --line) .landing 안에서 따로 정의한다(ADR 014).
   공통 클래스(.btn .badge .card ...)도 .landing 밑에 두어 콘솔로 새지 않게 한다.
 */
 
@@ -15,9 +15,9 @@
   --line: #1f2838;
   --line-strong: #2b3549;
   --ink: #eef2f8;
-  --ink-2: #bfc8d6;
-  --mid: #8592a6;
-  --faint: #5a6579;
+  --ink-2: #c6cedb;
+  --mid: #97a3b6;
+  --faint: #75819a;
   --accent: #3a72ff;
   --accent-hi: #5285ff;
   --accent-ink: #9dbbff;
@@ -47,8 +47,8 @@
   --line-strong: #cbd3df;
   --ink: #0f1729;
   --ink-2: #33405a;
-  --mid: #5b6880;
-  --faint: #8592a6;
+  --mid: #56627a;
+  --faint: #6f7c92;
   --accent: #2f5fe0;
   --accent-hi: #2652c8;
   --accent-ink: #2652c8;

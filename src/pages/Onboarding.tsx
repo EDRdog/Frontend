@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/api'
-import Card from '@/components/ui/Card'
+import Card, { panelHead } from '@/components/ui/Card'
 import AsyncState from '@/components/ui/AsyncState'
+import FocusList from '@/components/ui/FocusList'
+import Tag from '@/components/ui/Tag'
 import { useApi } from '@/hooks/useApi'
 import { useAuthStore } from '@/store/auth'
 import { hostStatusColor, hostStatusLabel, relativeTime } from '@/lib/format'
@@ -10,7 +12,8 @@ import type { Host, InstallLink } from '@/api/types'
 
 type OsKey = 'macos' | 'windows'
 
-type Step = { title: string; body: string; command?: string }
+/** manual: 사람이 직접 해야 하는 단계. 스크립트가 대신 못 하므로 주의 색으로 표시한다. */
+type Step = { title: string; body: string; command?: string; manual?: boolean }
 
 const OS_TABS: { key: OsKey; label: string }[] = [
   { key: 'macos', label: 'macOS' },
@@ -32,11 +35,12 @@ const INSTALL_NOTES: Record<OsKey, Step[]> = {
     },
     {
       title: '전체 디스크 접근(FDA) 승인',
+      manual: true,
       body: '이 단계만 사람이 직접 해야 합니다. macOS의 TCC는 사람 승인이나 MDM 프로파일로만 켤 수 있어 스크립트가 대신할 수 없습니다.\n스크립트가 설정 창을 열어 줍니다. "+"를 누르고 아래 경로를 추가한 뒤 켜고 Enter를 누르면 이어서 진행합니다.\n/usr/local/bin/edrdog-agent',
     },
     {
       title: '결과 확인',
-      body: '스크립트가 끝나면서 결과를 알려줍니다. "등록 완료"가 보이면 끝난 것이고, 아래 3번 기기 상태에도 이 기기가 나타납니다.\nERR_NOT_PERMITTED가 보이면 권한이 아직 안 켜진 것입니다. 전체 디스크 접근에서 껐다 다시 켠 뒤 아래로 재시작하고 로그를 확인하세요.',
+      body: '스크립트가 끝나면서 결과를 알려줍니다. "등록 완료"가 보이면 끝난 것이고, 3번 기기 상태에도 이 기기가 나타납니다.\nERR_NOT_PERMITTED가 보이면 권한이 아직 안 켜진 것입니다. 전체 디스크 접근에서 껐다 다시 켠 뒤 아래로 재시작하고 로그를 확인하세요.',
       command:
         'sudo launchctl kickstart -k system/com.edrdog.agent\ntail -n 50 /var/log/edrdog/agent.log',
     },
@@ -48,7 +52,7 @@ const INSTALL_NOTES: Record<OsKey, Step[]> = {
     },
     {
       title: '결과 확인',
-      body: '서비스가 Running이면 수집이 시작된 것입니다.\n등록되면 아래 3번 기기 상태에 이 기기가 먼저 나타나고, 이벤트가 아직 없으면 수집 없음으로 표시됩니다.',
+      body: '서비스가 Running이면 수집이 시작된 것입니다.\n등록되면 3번 기기 상태에 이 기기가 먼저 나타나고, 이벤트가 아직 없으면 수집 없음으로 표시됩니다.',
       command: 'Get-Service edrdog-agent',
     },
   ],
@@ -69,7 +73,6 @@ const INSTALL_PATHS: Record<OsKey, { label: string; value: string }[]> = {
     { label: '로그', value: 'C:\\ProgramData\\EDRdog\\agent.log' },
   ],
 }
-
 
 const SLACK_STEPS = [
   'api.slack.com/apps 접속 → Create New App → From scratch 선택',
@@ -125,7 +128,7 @@ function CommandBlock({ command, display }: { command: string; display?: string 
         <CopyButton text={command} onError={() => setCopyFailed(true)} />
       </div>
       {copyFailed && (
-        <div className="mt-[8px] text-[12px] text-high">
+        <div className="mt-[8px] text-[12px] text-med">
           클립보드를 쓸 수 없는 환경입니다. 위 내용을 직접 선택해 복사하세요.
         </div>
       )}
@@ -170,14 +173,31 @@ function OsTabs<K extends string>({
   )
 }
 
+/** 설치 안내를 세로 흐름으로 잇는다. 사람이 직접 해야 하는 단계만 주의 색이다. */
 function StepList({ steps }: { steps: Step[] }) {
   return (
-    <ol className="mt-[18px] flex flex-col gap-[18px]">
+    <ol className="flex flex-col">
       {steps.map((step, i) => (
-        <li key={step.title} className="flex gap-[12px]">
-          <StepNumber n={i + 1} />
-          <div className="grow min-w-0">
-            <div className="text-[13.5px] font-semibold text-ink">{step.title}</div>
+        <li key={step.title} className="relative flex gap-[16px] pb-[18px] last:pb-0">
+          {i < steps.length - 1 && (
+            <span
+              aria-hidden
+              className="absolute left-[15px] top-[32px] bottom-0 w-[2px] bg-line"
+            />
+          )}
+          <span
+            className={`grid h-[32px] w-[32px] flex-none place-items-center rounded-full border font-mono text-[11px] font-semibold ${
+              step.manual
+                ? 'border-med bg-[color-mix(in_srgb,var(--med)_var(--wash),transparent)] text-med'
+                : 'border-line bg-surface text-ink-2'
+            }`}
+          >
+            {String(i + 1).padStart(2, '0')}
+          </span>
+          <div className="min-w-0 grow pt-[5px]">
+            <div className={`text-[14px] font-semibold ${step.manual ? 'text-med' : 'text-ink'}`}>
+              {step.title}
+            </div>
             <div className="mt-[4px] whitespace-pre-line text-[13px] text-mid leading-[1.6]">
               {step.body}
             </div>
@@ -186,24 +206,6 @@ function StepList({ steps }: { steps: Step[] }) {
         </li>
       ))}
     </ol>
-  )
-}
-
-function SectionCard({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: React.ReactNode
-}) {
-  return (
-    <Card className="px-[16px] py-[18px] sm:px-[24px] sm:py-[22px]">
-      <div className="text-[14px] font-bold text-ink">{title}</div>
-      <div className="mt-[6px] text-[13px] text-faint leading-[1.6]">{description}</div>
-      <div className="mt-[16px]">{children}</div>
-    </Card>
   )
 }
 
@@ -218,10 +220,11 @@ function LoginHint() {
   )
 }
 
-/** 섹션 사이 의존 관계처럼 놓치면 알림이 사라지는 전제를 강조하는 안내 박스. */
-function NoteBox({ children }: { children: React.ReactNode }) {
+/** 단계 사이 의존 관계처럼 놓치면 알림이 사라지는 전제를 강조하는 주의 박스. */
+function NoteBox({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-sm border border-line bg-panel-2 px-[14px] py-[12px] text-[13px] text-mid leading-[1.6]">
+    <div className="rounded-sm border-l-2 border-med bg-panel-2 px-[14px] py-[12px] text-[13px] text-mid leading-[1.6]">
+      {title && <strong className="mb-[2px] block font-semibold text-med">{title}</strong>}
       {children}
     </div>
   )
@@ -306,8 +309,8 @@ function InstallLinkPanel({
         <div>
           <div className="text-[13px] font-semibold text-ink">설치 링크</div>
           <div className="mt-[3px] text-[12px] leading-[1.6] text-faint">
-            서버 주소와 enroll secret이 이미 들어 있는 한 줄을 발급합니다. 받는 사람이 키를 다룰 일이
-            없습니다.
+            서버 주소와 enroll secret이 이미 들어 있는 한 줄을 발급합니다. 받는 사람이 키를 다룰
+            일이 없습니다.
           </div>
         </div>
         <PrimaryButton onClick={onIssue} disabled={pending}>
@@ -335,7 +338,7 @@ function ObservedBadge({ observed }: { observed: boolean }) {
   return (
     <span
       className={`shrink-0 rounded-xs border border-line px-[7px] py-[3px] text-[11px] font-semibold ${
-        observed ? 'text-good' : 'text-high'
+        observed ? 'text-good' : 'text-med'
       }`}
     >
       {observed ? '관측됨' : '관측된 적 없음 (오타 의심)'}
@@ -445,7 +448,7 @@ function WebhookForm({
         )}
       </div>
       {url.length > 0 && !valid && (
-        <div className="mt-[8px] text-[12px] text-high">
+        <div className="mt-[8px] text-[12px] text-med">
           https://hooks.slack.com/ 로 시작하는 URL을 입력하세요.
         </div>
       )}
@@ -567,11 +570,11 @@ function MyHostsPanel({
 
       {candidates.length === 0 && choice !== MANUAL_OPTION && (
         <div className="mt-[8px] text-[12px] text-faint">
-          아직 선택할 수 있는 관측 기기가 없습니다. 위 1번 설치를 마치면 목록에 나타납니다.
+          아직 선택할 수 있는 관측 기기가 없습니다. 1번 설치를 마치면 목록에 나타납니다.
         </div>
       )}
       {unobserved && (
-        <div className="mt-[8px] text-[12px] text-high leading-[1.6]">
+        <div className="mt-[8px] text-[12px] text-med leading-[1.6]">
           아직 관측되지 않은 호스트입니다. 이름이 정확하지 않으면 알림이 전달되지 않습니다.
         </div>
       )}
@@ -682,7 +685,7 @@ function HostStatusPanel({
                       />
                       {noEvents ? '수집 없음' : hostStatusLabel(h.status)}
                     </span>
-                    <span className={`text-[12.5px] ${stale ? 'text-high' : 'text-mid'}`}>
+                    <span className={`text-[12.5px] ${stale ? 'text-med' : 'text-mid'}`}>
                       {stale ? '연결 끊김' : '연결됨'}
                     </span>
                     <span className="font-mono text-[11px] text-faint text-right">
@@ -708,9 +711,38 @@ function HostStatusPanel({
   )
 }
 
+/** 연동 4단계. 오른쪽 목록과 본문 머리가 같은 값을 쓴다. */
+const STEPS = [
+  {
+    title: '기기 설치 및 로그 수집',
+    description:
+      '설치 링크를 발급해 나온 한 줄을 대상 기기에서 실행하세요. 프로세스·파일·네트워크를 한 에이전트가 모두 수집합니다.',
+    sub: '대상 기기에서 한 줄 실행',
+  },
+  {
+    title: 'Slack 알림 연결',
+    description: 'Slack Incoming Webhook을 발급받아 등록하면 탐지 알림이 이 채널로 전달됩니다.',
+    sub: 'Incoming Webhook 등록',
+  },
+  {
+    title: '기기 상태',
+    description:
+      '조직에 등록됐거나 관측 중인 기기입니다. 4번에 입력할 정확한 host 이름을 여기서 확인하세요.',
+    sub: '정확한 host 이름 확인',
+  },
+  {
+    title: '내 기기 등록',
+    description: '등록한 host의 탐지 알림이 내 Slack Webhook으로 전달됩니다.',
+    sub: 'host 이름 완전 일치',
+  },
+]
+
 function Onboarding() {
   const [os, setOs] = useState<OsKey>('macos')
   const loggedIn = useAuthStore((s) => s.token !== null)
+  // 지금 크게 보는 단계(0~3). 오른쪽 목록에서 누르면 바뀐다.
+  const [step, setStep] = useState(0)
+  const focusRef = useRef<HTMLDivElement>(null)
 
   // 체크리스트·호스트 선택·관측 배지가 같은 응답을 봐야 해서 조회를 이 위치에서 한 번만 한다.
   // 비로그인 상태의 개인 설정 API 는 401 이라 아예 부르지 않는다(화면은 LoginHint 로 대체된다).
@@ -767,6 +799,119 @@ function Onboarding() {
     },
   ]
 
+  function select(key: string) {
+    setStep(Number(key))
+    // 1280 미만에서는 단계 목록이 본문 아래에 쌓여 있어 눌러도 바뀐 게 안 보인다. 본문 머리로 올려 준다.
+    if (!window.matchMedia('(min-width: 1280px)').matches) {
+      focusRef.current?.scrollIntoView({ block: 'start' })
+    }
+  }
+
+  // 단계별 본문. 넷 다 그려 두고 고른 것만 보인다. 단계를 오가도 입력 중인 값이 지워지지 않는다.
+  const bodies = [
+    <Fragment key="install">
+      <OsTabs tabs={OS_TABS} value={os} onChange={setOs} />
+
+      {loggedIn ? (
+        <InstallLinkPanel
+          os={os}
+          link={installLink}
+          pending={linkPending}
+          error={linkError}
+          onIssue={issueLink}
+        />
+      ) : (
+        <div className="mt-[16px] text-[13px] text-med leading-[1.6]">
+          로그인하면 내 조직의 설치 링크를 발급할 수 있습니다.
+        </div>
+      )}
+
+      <div className="mt-[24px]">
+        <StepList steps={INSTALL_NOTES[os]} />
+      </div>
+
+      {/* 설치 경로: 문제가 생겼을 때 볼 곳 */}
+      <h3 className="mt-[24px] text-[13px] font-bold text-ink">
+        설치 경로
+        <small className="ml-[8px] text-[12px] font-normal text-faint">
+          문제가 생겼을 때 볼 곳
+        </small>
+      </h3>
+      <div className="mt-[10px] flex flex-col gap-[6px]">
+        {INSTALL_PATHS[os].map((p) => (
+          <div key={p.label} className="flex flex-wrap gap-[10px] text-[12px]">
+            <span className="w-[68px] shrink-0 text-faint">{p.label}</span>
+            <span className="font-mono wrap-anywhere text-mid">{p.value}</span>
+          </div>
+        ))}
+      </div>
+    </Fragment>,
+    <Fragment key="slack">
+      <NoteBox>
+        webhook만 등록하면 알림은 오지 않습니다.{' '}
+        <span className="text-ink-2">4번 내 기기 등록</span>
+        까지 마쳐야 그 기기의 알림이 이 채널로 전달됩니다.
+      </NoteBox>
+
+      <div className="mt-[18px] text-[13px] font-semibold text-ink-2">Webhook 발급 방법</div>
+      <ol className="mt-[10px] flex flex-col gap-[10px]">
+        {SLACK_STEPS.map((item, i) => (
+          <li key={item} className="flex gap-[12px]">
+            <StepNumber n={i + 1} />
+            <span className="grow text-[13px] text-mid leading-[1.6] self-center">{item}</span>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-[18px] text-[13px] font-semibold text-ink-2">내 Webhook URL</div>
+      <div className="mt-[6px] text-[12px] text-faint leading-[1.6]">
+        4번에서 내가 등록한 host의 알림이 이 채널로 갑니다.
+      </div>
+      <div className="mt-[10px]">
+        {loggedIn ? (
+          <AsyncState loading={webhookQ.loading} error={webhookQ.error} onRetry={webhookQ.refetch}>
+            <WebhookForm
+              initial={webhookUrl}
+              onSave={api.setWebhook}
+              onSaved={setJustSavedWebhook}
+              showTest
+            />
+          </AsyncState>
+        ) : (
+          <LoginHint />
+        )}
+      </div>
+    </Fragment>,
+    <HostStatusPanel
+      key="hosts"
+      hosts={observed}
+      loading={observedQ.loading}
+      error={observedQ.error}
+      refetch={observedQ.refetch}
+    />,
+    <Fragment key="register">
+      <NoteBox>
+        알림 라우팅은 host 이름 <span className="text-ink-2">완전 일치</span>로 동작합니다. 3번
+        목록에서 고르면 항상 일치하고, 직접 입력한 이름이 한 글자라도 다르면 알림이 조용히
+        사라집니다. 2번의 webhook도 함께 등록해야 알림이 옵니다.
+      </NoteBox>
+
+      <div className="mt-[16px]">
+        {loggedIn ? (
+          <MyHostsPanel
+            observed={observed}
+            myHosts={myHosts}
+            loading={myHostsQ.loading}
+            error={myHostsQ.error}
+            refetch={myHostsQ.refetch}
+          />
+        ) : (
+          <LoginHint />
+        )}
+      </div>
+    </Fragment>,
+  ]
+
   return (
     <div className="flex flex-col gap-[20px]">
       <div>
@@ -779,134 +924,61 @@ function Onboarding() {
         </div>
       </div>
 
-      {loggedIn && (
-        <SectionCard
-          title="연동 체크리스트"
-          description="탐지 알림이 전달되려면 개인 webhook 과 내 기기 등록이 둘 다 갖춰져야 합니다. 하나라도 비어 있으면 알림은 조용히 사라집니다."
-        >
-          <Checklist items={checklist} />
-        </SectionCard>
-      )}
-
-      <SectionCard
-        title="1. 기기 설치 및 로그 수집"
-        description="설치 링크를 발급해 나온 한 줄을 대상 기기에서 실행하세요. 프로세스·파일·네트워크를 한 에이전트가 모두 수집합니다."
-      >
-        <OsTabs tabs={OS_TABS} value={os} onChange={setOs} />
-
-        {loggedIn ? (
-          <InstallLinkPanel
-            os={os}
-            link={installLink}
-            pending={linkPending}
-            error={linkError}
-            onIssue={issueLink}
-          />
-        ) : (
-          <div className="mt-[16px] text-[13px] text-high leading-[1.6]">
-            로그인하면 내 조직의 설치 링크를 발급할 수 있습니다.
-          </div>
-        )}
-
-        <div className="mt-[20px]">
-          <StepList steps={INSTALL_NOTES[os]} />
-        </div>
-
-        <details className="mt-[20px]">
-          <summary className="cursor-pointer text-[12.5px] text-faint hover:text-mid">
-            설치 경로 (문제가 생겼을 때 볼 곳)
-          </summary>
-          <div className="mt-[10px] flex flex-col gap-[6px]">
-            {INSTALL_PATHS[os].map((p) => (
-              <div key={p.label} className="flex flex-wrap gap-[10px] text-[12px]">
-                <span className="w-[68px] shrink-0 text-faint">{p.label}</span>
-                <span className="font-mono wrap-anywhere text-mid">{p.value}</span>
-              </div>
-            ))}
-          </div>
-        </details>
-      </SectionCard>
-
-      <SectionCard
-        title="2. Slack 알림 연결"
-        description="Slack Incoming Webhook을 발급받아 등록하면 탐지 알림이 이 채널로 전달됩니다."
-      >
-        <NoteBox>
-          webhook만 등록하면 알림은 오지 않습니다. 아래{' '}
-          <span className="text-ink-2">4번 내 기기 등록</span>
-          까지 마쳐야 그 기기의 알림이 이 채널로 전달됩니다.
-        </NoteBox>
-
-        <div className="mt-[18px] text-[13px] font-semibold text-ink-2">Webhook 발급 방법</div>
-        <ol className="mt-[10px] flex flex-col gap-[10px]">
-          {SLACK_STEPS.map((step, i) => (
-            <li key={step} className="flex gap-[12px]">
-              <StepNumber n={i + 1} />
-              <span className="grow text-[13px] text-mid leading-[1.6] self-center">{step}</span>
-            </li>
+      {/* 포커스: 왼쪽 지금 단계 하나 크게, 오른쪽 4단계 목록. 2열은 대시보드와 같이 xl(1280) 부터. */}
+      <section className="grid grid-cols-1 items-start gap-[16px] xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div ref={focusRef} className="min-w-0 scroll-mt-[74px]">
+          {STEPS.map((item, i) => (
+            <div key={item.title} hidden={step !== i}>
+              <Card className="px-[18px] py-[20px] sm:px-[28px] sm:py-[26px]">
+                <Tag>
+                  {i + 1} / {STEPS.length}
+                </Tag>
+                <h2 className="mt-[16px] text-[24px] sm:text-[30px] font-bold leading-[1.25] tracking-[-0.03em] text-ink">
+                  {item.title}
+                </h2>
+                <p className="mt-[4px] text-[13px] text-mid leading-[1.6]">{item.description}</p>
+                <div className="mt-[20px]">{bodies[i]}</div>
+              </Card>
+            </div>
           ))}
-        </ol>
-
-        <div className="mt-[18px] text-[13px] font-semibold text-ink-2">내 Webhook URL</div>
-        <div className="mt-[6px] text-[12px] text-faint leading-[1.6]">
-          4번에서 내가 등록한 host의 알림이 이 채널로 갑니다.
         </div>
-        <div className="mt-[10px]">
-          {loggedIn ? (
-            <AsyncState
-              loading={webhookQ.loading}
-              error={webhookQ.error}
-              onRetry={webhookQ.refetch}
-            >
-              <WebhookForm
-                initial={webhookUrl}
-                onSave={api.setWebhook}
-                onSaved={setJustSavedWebhook}
-                showTest
-              />
-            </AsyncState>
-          ) : (
-            <LoginHint />
-          )}
-        </div>
-      </SectionCard>
 
-      <SectionCard
-        title="3. 기기 상태"
-        description="조직에 등록됐거나 관측 중인 기기입니다. 4번에 입력할 정확한 host 이름을 여기서 확인하세요."
-      >
-        <HostStatusPanel
-          hosts={observed}
-          loading={observedQ.loading}
-          error={observedQ.error}
-          refetch={observedQ.refetch}
-        />
-      </SectionCard>
-
-      <SectionCard
-        title="4. 내 기기 등록"
-        description="등록한 host의 탐지 알림이 내 Slack Webhook으로 전달됩니다."
-      >
-        <NoteBox>
-          알림 라우팅은 host 이름 <span className="text-ink-2">완전 일치</span>로 동작합니다. 3번
-          목록에서 고르면 항상 일치하고, 직접 입력한 이름이 한 글자라도 다르면 알림이 조용히
-          사라집니다. 2번의 webhook도 함께 등록해야 알림이 옵니다.
-        </NoteBox>
-
-        <div className="mt-[16px]">
-          {loggedIn ? (
-            <MyHostsPanel
-              observed={observed}
-              myHosts={myHosts}
-              loading={myHostsQ.loading}
-              error={myHostsQ.error}
-              refetch={myHostsQ.refetch}
+        <aside className="flex min-w-0 flex-col gap-[12px]">
+          <Card className="overflow-hidden">
+            <div className={panelHead}>
+              <h2 className="text-[14px] font-bold text-ink">연동 단계</h2>
+              <span className="font-mono text-[11px] text-faint">{STEPS.length}단계</span>
+            </div>
+            {/* 누르면 왼쪽이 그 단계로 바뀐다. */}
+            <FocusList
+              items={STEPS.map((item, i) => ({
+                key: String(i),
+                color: i === step ? 'var(--accent)' : 'var(--line)',
+                title: `${i + 1}. ${item.title}`,
+                sub: i === 2 && observedQ.data ? `${item.sub} · ${observed.length}대` : item.sub,
+              }))}
+              currentKey={String(step)}
+              onSelect={select}
             />
-          ) : (
-            <LoginHint />
+          </Card>
+
+          {loggedIn && (
+            <Card className="overflow-hidden">
+              <div className={panelHead}>
+                <h2 className="text-[14px] font-bold text-ink">연동 체크리스트</h2>
+              </div>
+              <div className="px-[18px] py-[16px]">
+                <Checklist items={checklist} />
+              </div>
+            </Card>
           )}
-        </div>
-      </SectionCard>
+
+          <NoteBox title="알림이 오려면">
+            탐지 알림이 전달되려면 개인 webhook 과 내 기기 등록이 둘 다 갖춰져야 합니다. 하나라도
+            비어 있으면 알림은 조용히 사라집니다.
+          </NoteBox>
+        </aside>
+      </section>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 # EDRdog 디자인 시스템
 
-보안 관제 콘솔. 차분한 무채색 위에서 위험한 것만 색으로 튀게 한다. 결정 배경은 `docs/design-docs/decisions/015-redesign-direction.md`, 화면 시안은 `docs/design-docs/previews/`.
+보안 관제 콘솔. 차분한 바탕 위에서 위험한 것만 색으로 튀게 한다. 결정 배경은 `docs/design-docs/decisions/015-redesign-direction.md`, 화면 시안은 `docs/design-docs/previews/`.
 
 ## 1. 분위기
 - 콘솔(대시보드): 정밀하고 조용하다. 장식보다 정보 밀도와 위계로 완성도를 낸다.
@@ -16,7 +16,7 @@
 | 패널 `--panel` | `#0d121d` | `#ffffff` | 카드, 패널 |
 | 올림 `--raised` / `--hover` | `#151c2b` / `#1b2335` | `#f2f5fa` / `#e7ecf4` | 권고 박스, 보조 버튼 / hover |
 | 선 `--line` / `--line-strong` | `#1f2838` / `#2b3549` | `#dfe5ee` / `#cbd3df` | 구획선 / 입력·버튼 테두리 |
-| 글자 `--ink` `--ink-2` `--mid` `--faint` | `#eef2f8` `#bfc8d6` `#8592a6` `#5a6579` | `#0f1729` `#33405a` `#5b6880` `#8592a6` | 본문 / 보조 / 설명 / 라벨 |
+| 글자 `--ink` `--ink-2` `--mid` `--faint` | `#eef2f8` `#c6cedb` `#97a3b6` `#75819a` | `#0f1729` `#33405a` `#56627a` `#6f7c92` | 본문 / 보조 / 설명 / 라벨 |
 | 강조 `--accent` / `--accent-hi` | `#3a72ff` / `#5285ff` | `#2f5fe0` / `#2652c8` | 선택된 메뉴, 주 버튼, 데이터 막대(심각도 아닌 것) / 주 버튼 hover |
 | 강조 글자 `--accent-ink` | `#9dbbff` | `#2652c8` | 링크, 태그, hover 아이콘 |
 | 심각 `--crit` | `#f04848` | `#cc2936` | 심각도 심각, 위험 호스트 |
@@ -26,9 +26,10 @@
 | 정보 `--low` | `#5aa2ff` | `#1f5fbf` | 미판단 같은 상태 표시 |
 
 - 라이트의 의미 색은 흰 배경 대비 4.5:1 이상이 되도록 어둡게 잡았다.
+- 라벨 글자(`--faint`)도 카드 위에서 약 4.2:1 이상 나오게 잡았다. 처음 값(다크 `#5a6579`, 라이트 `#8592a6`)은 3.2:1 이라 화면 확인 중 잘 안 보여 올렸다.
 - 심각도 색은 배지, 표 행 왼쪽 띠(2px), 차트에만 쓴다. 배경 전체를 칠하지 않는다.
 - 시안 값의 원본은 `docs/design-docs/previews/dashboard.html` 의 `:root[data-theme='midnight']`, `:root[data-theme='cloud']`.
-- 구현: 랜딩은 이 표의 값을 `src/components/landing/landing.css` 의 `.landing` 안에서 정의한다. 콘솔(`src/index.css`)은 아직 옛 값이라 따로 이전해야 한다(`docs/exec-plans/tech-debt.md`).
+- 구현: 콘솔은 `src/index.css`, 랜딩은 `src/components/landing/landing.css` 의 `.landing` 안에 같은 값을 둔다. 콘솔은 옛 변수 이름을 그대로 쓰고 뜻만 맞췄다(`--surface`=패널, `--panel`=hover, `--panel-2`=올림, `--line`=진한 선, `--line-2`=구분선). 이름까지 합치는 일은 `docs/exec-plans/tech-debt.md`.
 
 ## 3. 글꼴
 - 본문: Pretendard Variable. 굵기 400, 500, 600, 700을 모두 쓴다.
