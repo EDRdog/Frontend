@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import RequireAuth from '@/components/RequireAuth'
 import { useThemeStore } from '@/store/theme'
-import Landing from '@/pages/Landing'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Onboarding from '@/pages/Onboarding'
@@ -17,6 +16,9 @@ import ForcePassword from '@/pages/ForcePassword'
 import Settings from '@/pages/Settings'
 import AuditLog from '@/pages/AuditLog'
 import SelfTest from '@/pages/SelfTest'
+
+// gsap 은 랜딩에서만 쓰므로 랜딩을 지연 로드해 다른 화면 번들에 들어오지 않게 한다.
+const Landing = lazy(() => import('@/pages/Landing'))
 
 // echarts 세계지도를 쓰는 페이지라 지연 로드해 별도 청크에서 온디맨드로 가져온다.
 const Intelligence = lazy(() => import('@/pages/Intelligence'))
@@ -41,7 +43,14 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={pageFallback}>
+            <Landing />
+          </Suspense>
+        }
+      />
       <Route path="/login" element={<Login />} />
       {/* 기본 비밀번호를 바꿔야 하는 계정이 머무는 화면. 셸 없이 이것만 보인다. */}
       <Route element={<RequireAuth />}>

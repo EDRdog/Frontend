@@ -36,3 +36,10 @@
 | 항목 | 위치 | 영향 | 발견일 |
 |---|---|---|---|
 | CI 워크플로가 없다 | `.github/workflows/` | 린트와 타입체크가 PR 에서 자동으로 돌지 않는다. Backend 에는 있다. `scripts/check.sh` 를 그대로 부르는 워크플로 하나면 된다 | 2026-10-04 |
+
+## 디자인 시스템
+
+| 항목 | 위치 | 영향 | 발견일 |
+|---|---|---|---|
+| 콘솔 토큰이 `DESIGN.md` 와 다르다 | `src/index.css` | 콘솔은 옛 토큰(`--surface`, `--panel` 의미 차이, 곡률 2~4px)이고 `DESIGN.md` 2장, 4장은 미드나잇/클라우드, 곡률 14px 소프트다. 랜딩만 `src/components/landing/landing.css` 의 `.landing` 안에 새 값을 따로 두었다(ADR 014). 콘솔을 옮기면 `.landing` 의 토큰 정의를 `:root` 로 올리고 중복을 지운다 | 2026-11-11 |
+| 랜딩 캔버스 코드에 `any` 가 남아 있다 | `src/components/landing/Hero.tsx`, `ThreatMap.tsx` | 시안 스크립트를 그대로 옮기느라 입자, 그래프 노드 일부를 `any` 로 두었다. 동작에는 영향이 없고, 다음에 이 코드를 고칠 때 타입을 붙인다 | 2026-11-11 |

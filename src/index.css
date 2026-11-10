@@ -119,15 +119,6 @@ a {
 a:hover {
   color: var(--accent-strong);
 }
-@keyframes edrPulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 1;
-  }
-}
 @keyframes edrBarGrow {
   from {
     transform: scaleX(0);
@@ -141,33 +132,8 @@ a:hover {
     transform: rotate(360deg);
   }
 }
-@keyframes edrCritGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(240, 100, 92, 0);
-  }
-  50% {
-    box-shadow: 0 0 9px 1px var(--crit);
-  }
-}
-@keyframes edrCtaGlow {
-  0%,
-  100% {
-    box-shadow: 0 6px 18px var(--accent-wash);
-  }
-  50% {
-    box-shadow: 0 12px 32px var(--accent-wash);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   * {
-    animation: none !important;
-  }
-}
-/* 랜딩 히어로의 3D 패널. 좁은 화면에서는 회전이 폭을 밀어내므로 평면으로 눕힌다. */
-@media (max-width: 1023px) {
-  [data-hero-panel] {
-    transform: none !important;
     animation: none !important;
   }
 }
