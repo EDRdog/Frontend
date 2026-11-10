@@ -46,12 +46,12 @@ export function daysAgo(days: number, now = Date.now()): number {
   return now - days * DAY
 }
 
-type Tone = 'crit' | 'high' | 'mid' | 'accent' | 'good'
+type Tone = 'crit' | 'high' | 'med' | 'mid' | 'accent' | 'good'
 
 const severityTones: Record<AlertSeverity, Tone> = {
   CRITICAL: 'crit',
   HIGH: 'high',
-  MEDIUM: 'mid',
+  MEDIUM: 'med',
 }
 
 const severityLabels: Record<AlertSeverity, string> = {
@@ -60,7 +60,7 @@ const severityLabels: Record<AlertSeverity, string> = {
   MEDIUM: '보통',
 }
 
-/** 미등록 severity 는 보통(mid)으로 떨어뜨린다. */
+/** 미등록 severity 는 회색(mid)으로 떨어뜨린다. */
 export function severityTone(severity: string): Tone {
   return severityTones[severity as AlertSeverity] ?? 'mid'
 }
@@ -128,9 +128,10 @@ const hostStatusLabels: Record<HostStatus, string> = {
   critical: '위험',
 }
 
+// 주의는 심각도 높음(주황)이 아니라 보통(노랑)과 같은 색이다(DESIGN.md 2장).
 const hostStatusColors: Record<HostStatus, string> = {
   healthy: 'var(--good)',
-  warning: 'var(--high)',
+  warning: 'var(--med)',
   critical: 'var(--crit)',
 }
 
@@ -145,6 +146,7 @@ export function hostStatusColor(status: string): string {
 export const severityColors: Record<Tone, string> = {
   crit: 'var(--crit)',
   high: 'var(--high)',
+  med: 'var(--med)',
   mid: 'var(--mid)',
   accent: 'var(--accent)',
   good: 'var(--good)',

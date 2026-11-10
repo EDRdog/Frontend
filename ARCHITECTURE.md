@@ -21,7 +21,7 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 | `src/pages/` | 화면. 데이터를 모으고 배치한다 |
 | `src/components/layout/` | `AppLayout`, `Sidebar`, `Topbar` |
 | `src/components/landing/` | 랜딩 섹션(`Hero`, `Flow`, `ThreatMap`, `Features`)과 `landing.css`. gsap 은 여기서만 쓴다 |
-| `src/components/ui/` | 표시 전용 조각. `AsyncState`, `ScrollArea`, `RelationGraph`, `AttackPath`, `EvidenceChain` 등 |
+| `src/components/ui/` | 표시 전용 조각. `AsyncState`, `ScrollArea`, `RelationGraph`, `AttackPath`, `AttackFlow`(세로 흐름), `FocusList`(포커스 배치 오른쪽 목록), `EvidenceChain` 등 |
 | `src/hooks/` | `useApi`(단건), `usePagedList`(목록) |
 | `src/api/` | 서버 통신과 DTO 타입, 비로그인 데모 데이터 |
 | `src/store/` | `auth`, `alerts`, `refresh`, `theme` |
@@ -41,11 +41,11 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 
 | 경로 | 화면 |
 |---|---|
-| `/dashboard` | 통계 타일, 공격 경로 재구성, 최근 탐지, 엔드포인트 도넛, 위협 TOP5, 탐지 추이 |
-| `/threats` | 알림 목록. 심각도·상태 칩 필터, 페이지네이션 |
-| `/endpoints`, `/endpoints/:host` | 호스트 목록과 상세(프로세스 트리, 이 호스트의 위협·사건·로그) |
-| `/events` | 원시 이벤트. 행 펼침으로 원본 JSON까지 |
-| `/incidents`, `/incidents/:id` | 사건 목록과 상세(계보, 구성 알림, 증거 사슬, 타임라인) |
+| `/dashboard` | 가장 급한 미판단 위협 하나(세로 공격 흐름, 권고, 판정), 대기열, 엔드포인트 상태, 접히는 한눈에 보기(탐지 추이, 위협 TOP5), 수집 수치 줄 |
+| `/threats` | 상태별 보드(미판단, 확정, 오탐). 열마다 `alertPage` 를 status 하나씩 따로 부르고 따로 이어 받는다. 심각도 칩 필터 |
+| `/endpoints`, `/endpoints/:host` | 포커스(고른 호스트의 위험도·프로세스 트리·위협 + 오른쪽 위험도 순 목록)와 상세(프로세스 트리, 이 호스트의 위협·사건·로그) |
+| `/events` | 원시 이벤트. 포커스(고른 이벤트 하나를 크게, 원본 JSON까지 + 오른쪽 이벤트 흐름) |
+| `/incidents`, `/incidents/:id` | 사건 체인 카드(루트 프로세스 → 탐지)와 상세(계보, 구성 알림, 증거 사슬, 타임라인) |
 | `/intelligence` | 관계 분석. egress 토폴로지 그래프 |
 | `/lookup` | IP·도메인 조회. 상관 그래프 + 실시간 DNS |
 | `/map` | 위협 지도. echarts 세계지도 |
@@ -107,4 +107,4 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 | world-atlas + topojson-client | 세계 국가 폴리곤. 번들에 들어가 오프라인으로 조달된다 |
 | Vercel | 배포. `vercel.json` 이 모든 경로를 `index.html` 로 리라이트한다(SPA) |
 
-지도는 날짜변경선을 넘는 폴리곤을 직접 잘라 재배치한다. 중심 경도를 150° 로 둔 것은 127° 로 두면 이음매가 53°W 라 브라질이 좌우로 잘리기 때문이다. 150° 면 이음매가 대서양 30°W 로 떨어져 아메리카와 아프리카가 온전하다.
+지도는 날짜변경선을 넘는 폴리곤을 직접 잘라 재배치한다. 중심 경도를 150° 로 둔 것은 127° 로 두면 이음매가 53°W 라 브라질이 좌우로 잘리기 때문이다. 150° 면 이음매가 대서양 30°W 로 떨어져 아메리카와 아프리카가 온전하다. 지도 색은 echarts 가 CSS 변수를 읽지 못해서 `getComputedStyle` 로 현재 테마의 토큰 값을 읽어 넘긴다(`RelationGraph` 와 같은 방식).

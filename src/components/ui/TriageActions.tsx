@@ -83,14 +83,14 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
             <button
               type="button"
               onClick={() => setAsking(false)}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line px-[16px] py-[10px] rounded-sm cursor-pointer font-sans"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line hover:bg-panel px-[16px] py-[10px] rounded-sm cursor-pointer font-sans active:translate-y-px"
             >
               취소
             </button>
             <button
               type="button"
               onClick={() => triage('confirmed')}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-crit px-[18px] py-[10px] rounded-sm cursor-pointer font-sans"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-crit px-[18px] py-[10px] rounded-pill cursor-pointer font-sans active:translate-y-px"
             >
               정말 확정하시겠습니까?
             </button>
@@ -101,7 +101,7 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
               type="button"
               onClick={() => triage('false_positive')}
               disabled={pending !== null}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line px-[16px] py-[10px] rounded-sm cursor-pointer font-sans disabled:opacity-60"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-ink-2 border border-line hover:bg-panel px-[16px] py-[10px] rounded-sm cursor-pointer font-sans active:translate-y-px disabled:opacity-60"
             >
               {pending === 'false_positive' ? '처리 중' : '오탐'}
             </button>
@@ -109,7 +109,7 @@ function TriageActions({ alert, detailTo }: TriageActionsProps) {
               type="button"
               onClick={() => setAsking(true)}
               disabled={pending !== null}
-              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-accent px-[18px] py-[10px] rounded-sm cursor-pointer font-sans disabled:opacity-60"
+              className="flex-1 sm:flex-none whitespace-nowrap text-[13px] font-semibold text-white bg-accent hover:bg-accent-strong px-[18px] py-[10px] rounded-pill cursor-pointer font-sans active:translate-y-px disabled:opacity-60"
             >
               {pending === 'confirmed' ? '처리 중' : '위협 확정'}
             </button>

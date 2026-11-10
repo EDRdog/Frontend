@@ -5,65 +5,66 @@
     'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI',
     'Noto Sans KR', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /*
-    콘솔 계열 톤. 채널 편차를 3 이내로 유지해 무채색을 지킨다.
-    남색이 섞이면(이전 --bg #0b0f16 은 편차 11) 심각도 색과 경합해 대시보드가 템플릿처럼 읽힌다.
-  */
+  /* 다크는 미드나잇(푸른 기가 도는 다크). 값과 역할은 DESIGN.md 2장을 따른다. */
   /* select 드롭다운·스크롤바 같은 OS 기본 UI 도 테마를 따라가게 한다(그냥 두면 항상 밝게 뜬다). */
   color-scheme: dark;
-  --bg: #0a0a0c;
-  --surface: #121215;
-  --panel: #1a1a1e;
-  --panel-2: #0e0e11;
-  --ink: #e6e6ea;
-  --ink-2: #c0c0c8;
-  --mid: #9a9aa4;
-  --faint: #6e6e78;
-  --line: #2a2a30;
-  --line-2: #1e1e23;
-  --accent: #4a76e8;
-  --accent-strong: #6b91f0;
-  --accent-wash: rgba(74, 118, 232, 0.16);
-  --crit: #f0645c;
-  --crit-wash: rgba(240, 100, 92, 0.14);
-  --high: #f2cb45;
-  --high-wash: rgba(242, 203, 69, 0.16);
-  --good: #35c77a;
-  --good-wash: rgba(53, 199, 122, 0.14);
+  --bg: #0a0e17;
+  --shell: #0e1320;
+  --surface: #0d121d;
+  --panel: #1b2335;
+  --panel-2: #151c2b;
+  --ink: #eef2f8;
+  --ink-2: #c6cedb;
+  --mid: #97a3b6;
+  --faint: #75819a;
+  --line: #2b3549;
+  --line-2: #1f2838;
+  --accent: #3a72ff;
+  --accent-strong: #5285ff;
+  --accent-ink: #9dbbff;
+  --crit: #f04848;
+  --high: #f7811f;
+  --med: #e5b80b;
+  --good: #2fc471;
+  /* 옅은 배경은 의미 색을 섞어 만든다. 테마가 바뀌면 섞는 비율만 바꾼다. */
+  --wash: 14%;
+  --accent-wash: color-mix(in srgb, var(--accent) var(--wash), transparent);
+  --crit-wash: color-mix(in srgb, var(--crit) var(--wash), transparent);
+  --high-wash: color-mix(in srgb, var(--high) var(--wash), transparent);
+  --good-wash: color-mix(in srgb, var(--good) var(--wash), transparent);
+  /* 어두운 바탕에서는 그림자가 안 보여서 옅은 테두리와 위쪽 빛 한 줄로 카드를 띄운다. */
+  --card-line: color-mix(in srgb, var(--ink) 9%, transparent);
+  --shadow-card:
+    inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent), 0 10px 30px rgba(0, 0, 0, 0.35);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.4), 0 24px 56px rgba(0, 0, 0, 0.55);
   --lift: 0 40px 80px rgba(0, 0, 0, 0.45);
 }
-/*
-  라이트는 다크 값을 뒤집어 쓰면 안 된다. 두 가지가 다르게 동작한다.
-
-  1) 경계선: 어두운 배경 위의 밝은 1px 은 눈에 잘 띄지만, 흰 카드 위의 옅은 1px 은 사라진다.
-     카드 그림자를 걷어낸 뒤로는 경계선이 구획을 혼자 책임지므로 라이트 쪽을 더 진하게 잡는다.
-  2) 의미 색: 어두운 배경에서 잘 보이라고 고른 밝은 색은 흰 배경에서 대비가 무너진다.
-     이전 값의 흰 배경 대비는 high 1.9:1 · crit 3.9:1 · good 3.3:1 로 셋 다 AA(4.5:1) 미달이었고,
-     특히 노랑은 사실상 읽을 수 없었다. 라이트 전용으로 어둡게 잡아 5:1 이상으로 올린다.
-*/
+/* 라이트는 클라우드(푸른 기가 도는 흰색). 의미 색은 흰 바탕 대비 4.5:1 이상이 되게 어둡게 잡았다. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f1f1f3;
+  --bg: #eef2f7;
+  --shell: #f7f9fc;
   --surface: #ffffff;
-  --panel: #e9e9ed;
-  --panel-2: #f6f6f8;
-  --ink: #16161a;
-  --ink-2: #3a3a42;
-  --mid: #5a5a64;
-  --faint: #82828d;
-  --line: #d6d6dc;
-  --line-2: #e3e3e8;
-  --accent: #2c4fd4;
-  --accent-strong: #1f3aa8;
-  --accent-wash: #eef1fc;
-  --crit: #cd2b31;
-  --crit-wash: #fcecec;
-  --high: #ad5700;
-  --high-wash: #fcf4d6;
-  --good: #18794e;
-  --good-wash: #e8f6ee;
+  --panel: #e7ecf4;
+  --panel-2: #f2f5fa;
+  --ink: #0f1729;
+  --ink-2: #33405a;
+  --mid: #56627a;
+  --faint: #6f7c92;
+  --line: #cbd3df;
+  --line-2: #dfe5ee;
+  --accent: #2f5fe0;
+  --accent-strong: #2652c8;
+  --accent-ink: #2652c8;
+  --crit: #cc2936;
+  --high: #b24a00;
+  --med: #8a6500;
+  --good: #1d7a4c;
+  --wash: 10%;
+  /* 밝은 바탕에서는 테두리 없이 옅은 그림자 하나로 카드를 띄운다. */
+  --card-line: transparent;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-1: 0 1px 3px rgba(20, 30, 50, 0.06), 0 8px 24px rgba(20, 30, 50, 0.06);
   --shadow-2: 0 4px 14px rgba(20, 30, 50, 0.07), 0 30px 64px rgba(20, 30, 50, 0.1);
   --lift: 0 30px 70px rgba(20, 30, 50, 0.13);
@@ -71,6 +72,7 @@
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-shell: var(--shell);
   --color-surface: var(--surface);
   --color-panel: var(--panel);
   --color-panel-2: var(--panel-2);
@@ -82,20 +84,19 @@
   --color-line-2: var(--line-2);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
   --color-crit: var(--crit);
   --color-high: var(--high);
+  --color-med: var(--med);
   --color-good: var(--good);
   --font-sans: var(--sans);
   --font-mono: var(--mono);
 
-  /*
-    콘솔 곡률 스케일. 3단계로 고정하고 임의값(rounded-[10px] 류)은 쓰지 않는다.
-    xs=배지·태그, sm=버튼·입력·행, md=카드·패널·오버레이.
-    Landing 은 마케팅 페이지라 자체 값을 유지한다.
-  */
-  --radius-xs: 2px;
-  --radius-sm: 3px;
-  --radius-md: 4px;
+  /* 소프트 곡률(DESIGN.md 4장). xs=태그, sm=버튼·입력·메뉴, md=카드·패널, pill=주 버튼·심각도 배지. */
+  --radius-xs: 3px;
+  --radius-sm: 9px;
+  --radius-md: 14px;
+  --radius-pill: 980px;
 }
 
 * {
@@ -112,9 +113,12 @@ body {
   word-break: keep-all;
   overflow-wrap: break-word;
 }
-a {
-  color: var(--accent);
-  text-decoration: none;
+/* 링크 기본색. base 레이어에 둬야 text-* 유틸리티가 이긴다 */
+@layer base {
+  a {
+    color: var(--accent-ink);
+    text-decoration: none;
+  }
 }
 a:hover {
   color: var(--accent-strong);

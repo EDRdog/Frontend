@@ -282,25 +282,31 @@ const items: NavItem[] = [
   },
 ]
 
-// 미판단 위협 배지는 위협 항목에만 붙는다.
+// 미판단 위협 배지는 위협 항목에만 붙는다. 선택된 항목만 파랑으로 채우고 흰 글자로 쓴다.
 function NavRow({ item, openCount }: { item: NavItem; openCount: number }) {
   return (
     <NavLink
       to={item.to}
       className={({ isActive }) =>
         `flex items-center gap-[11px] px-[11px] py-[8px] rounded-sm text-[13px] font-semibold cursor-pointer transition-colors ${
-          isActive
-            ? 'bg-[var(--accent-wash)] text-accent'
-            : 'text-mid hover:text-ink-2 hover:bg-panel'
+          isActive ? 'bg-accent !text-white' : '!text-ink-2 hover:!text-ink hover:bg-panel'
         }`
       }
     >
-      {item.icon}
-      <span>{item.label}</span>
-      {item.to === '/threats' && openCount > 0 && (
-        <span className="ml-auto rounded-xs bg-crit px-[5px] py-[1px] font-mono text-[11px] font-semibold text-white">
-          {openCount}
-        </span>
+      {({ isActive }) => (
+        <>
+          {item.icon}
+          <span>{item.label}</span>
+          {item.to === '/threats' && openCount > 0 && (
+            <span
+              className={`ml-auto rounded-xs px-[5px] py-[1px] font-mono text-[11px] font-semibold ${
+                isActive ? 'bg-white/20 text-white' : 'bg-[var(--crit-wash)] text-crit'
+              }`}
+            >
+              {openCount}
+            </span>
+          )}
+        </>
       )}
     </NavLink>
   )
@@ -336,7 +342,7 @@ function Sidebar({ open, onClose }: SidebarProps) {
         하단의 사용자 정보와 로그아웃이 주소창에 가려진다.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 h-dvh w-[224px] flex-shrink-0 border-r border-line-2 bg-surface flex flex-col px-[14px] py-[18px] transition-transform overflow-y-auto lg:inset-auto lg:z-auto lg:sticky lg:top-0 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 h-dvh w-[224px] flex-shrink-0 border-r border-line-2 bg-shell flex flex-col px-[14px] py-[18px] transition-transform overflow-y-auto lg:inset-auto lg:z-auto lg:sticky lg:top-0 lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -362,7 +368,7 @@ function Sidebar({ open, onClose }: SidebarProps) {
             if (groupItems.length === 0) return null
             return (
               <div key={group} className="flex flex-col gap-[3px] mt-[16px]">
-                <span className="px-[11px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.09em] text-faint">
+                <span className="px-[11px] pb-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
                   {group}
                 </span>
                 {groupItems.map((item) => (
@@ -408,7 +414,7 @@ function Sidebar({ open, onClose }: SidebarProps) {
             </span>
             <NavLink
               to="/login"
-              className="text-center text-[12.5px] font-semibold !text-white bg-accent py-[9px] rounded-sm"
+              className="text-center text-[12.5px] font-semibold !text-white bg-accent hover:bg-accent-strong active:translate-y-px py-[9px] rounded-pill"
             >
               로그인
             </NavLink>
