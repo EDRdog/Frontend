@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import { useThemeStore } from '@/store/theme'
-import Landing from '@/pages/Landing'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Onboarding from '@/pages/Onboarding'
@@ -12,6 +11,9 @@ import EndpointDetail from '@/pages/EndpointDetail'
 import Events from '@/pages/Events'
 import Incidents from '@/pages/Incidents'
 import IncidentDetail from '@/pages/IncidentDetail'
+
+// gsap 은 랜딩에서만 쓰므로 랜딩을 지연 로드해 다른 화면 번들에 들어오지 않게 한다.
+const Landing = lazy(() => import('@/pages/Landing'))
 
 // echarts 세계지도를 쓰는 페이지라 지연 로드해 별도 청크에서 온디맨드로 가져온다.
 const Intelligence = lazy(() => import('@/pages/Intelligence'))
@@ -36,7 +38,14 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={pageFallback}>
+            <Landing />
+          </Suspense>
+        }
+      />
       <Route path="/login" element={<Login />} />
       {/* 대시보드는 로그인 없이도 열린다. 토큰이 없으면 데모 데이터를 그린다(src/api/demo.ts). */}
       <Route element={<AppLayout />}>

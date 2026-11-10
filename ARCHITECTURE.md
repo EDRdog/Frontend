@@ -20,6 +20,7 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 |---|---|
 | `src/pages/` | 화면. 데이터를 모으고 배치한다 |
 | `src/components/layout/` | `AppLayout`, `Sidebar`, `Topbar` |
+| `src/components/landing/` | 랜딩 섹션(`Hero`, `Flow`, `ThreatMap`, `Features`)과 `landing.css`. gsap 은 여기서만 쓴다 |
 | `src/components/ui/` | 표시 전용 조각. `AsyncState`, `ScrollArea`, `RelationGraph`, `AttackPath`, `EvidenceChain` 등 |
 | `src/hooks/` | `useApi`(단건), `usePagedList`(목록) |
 | `src/api/` | 서버 통신과 DTO 타입, 비로그인 데모 데이터 |
@@ -34,7 +35,7 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 
 ## 라우트
 
-`AppLayout` 밖: `/`(Landing), `/login`. 나머지는 전부 `AppLayout` 안이다.
+`AppLayout` 밖: `/`(Landing), `/login`. 나머지는 전부 `AppLayout` 안이다. `Landing` 은 gsap 때문에 `lazy()` 로 별도 청크다(ADR `docs/design-docs/decisions/014-landing-scroll-storytelling.md`).
 
 | 경로 | 화면 |
 |---|---|
