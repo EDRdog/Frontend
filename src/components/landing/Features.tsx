@@ -594,9 +594,6 @@ function Features() {
               <div className="ft-viz" aria-hidden="true">
                 <div className="ft-rstat">
                   <div>
-                    활성 규칙<b className="mono">312</b>
-                  </div>
-                  <div>
                     오늘 매칭
                     <b className="mono" id="ft-hits">
                       47

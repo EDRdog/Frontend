@@ -123,7 +123,7 @@
   .hx-d-top b { display: block; font-size: 14px; line-height: 1.2; }
   .hx-d-search { margin-left: auto; display: flex; align-items: center; width: 220px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-strong); color: var(--faint); font-size: 12px; }
   .hx-d-body { display: grid; gap: 12px; padding: 16px 20px 20px; }
-  .hx-d-strip { display: grid; grid-template-columns: auto repeat(4, 1fr); }
+  .hx-d-strip { display: grid; grid-template-columns: auto repeat(3, 1fr); }
   .hx-d-strip > div { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-left: 1px solid var(--line); font-size: 12px; color: var(--mid); }
   .hx-d-strip > div:first-child { border-left: 0; font: 600 10px var(--mono); letter-spacing: .1em; color: var(--ink-2); }
   .hx-d-strip b { margin-left: auto; font: 600 13px var(--mono); color: var(--ink); }
@@ -219,7 +219,7 @@
     <p class="h2 hx-head hx-head2">위협만 골라내고</p>
     <p class="h2 hx-head hx-head3">한 화면에 정리합니다</p>
 
-    <div class="hx-gtag" aria-hidden="true"><i></i>탐지 규칙 312개</div>
+    <div class="hx-gtag" aria-hidden="true"><i></i>탐지 규칙</div>
     <div class="hx-count" aria-hidden="true">
       <div>들어온 이벤트 <b id="hx-n">18,240</b></div>
       <div>걸러낸 위협 <b class="hx-m" id="hx-m">0</b></div>
@@ -246,7 +246,6 @@
           <div class="card hx-d-strip hx-dp">
             <div><span class="hx-live"></span>LIVE SIGNAL</div>
             <div>24시간 수집 이벤트<b class="hx-kv" data-live="1">0</b></div>
-            <div>탐지 규칙<b>312</b></div>
             <div>규칙 적중<b class="hx-kv" data-to="5">0</b></div>
             <div>온라인 엔드포인트<b>126 / 128</b></div>
           </div>
@@ -1976,7 +1975,6 @@
         <p class="ft-td">MITRE ATT&amp;CK 기준 규칙에 걸리면 바로 표시돼요.</p>
         <div class="ft-viz" aria-hidden="true">
           <div class="ft-rstat">
-            <div>활성 규칙<b class="mono">312</b></div>
             <div>오늘 매칭<b class="mono" id="ft-hits">47</b></div>
           </div>
           <ul class="ft-rules">
