@@ -360,7 +360,7 @@ function Flow() {
           <br />
           원인부터 조치까지
         </h2>
-        <p className="lead">경보를 누르면 공격 경로가 그려지고, 같은 화면에서 바로 막습니다.</p>
+        <p className="lead">경보를 누르면 공격 경로가 그려지고, 같은 화면에서 바로 프로세스를 종료합니다.</p>
       </div>
 
       <div className="fl-pin">
@@ -543,8 +543,8 @@ function Flow() {
                             <div className="fl-slot"></div>
                             <div className="fl-row" data-s="high">
                               <div className="fl-t">
-                                <b>외부 C2 서버 반복 연결</b>
-                                <code>c2_beacon</code>
+                                <b>낡은 TLS 로 외부 연결</b>
+                                <code>weak_tls_handshake</code>
                               </div>
                               <span className="fl-h">fin-02</span>
                               <span>
@@ -556,8 +556,8 @@ function Flow() {
                             </div>
                             <div className="fl-row" data-s="high">
                               <div className="fl-t">
-                                <b>LSASS 메모리 접근</b>
-                                <code>lsass_memory_access</code>
+                                <b>LSASS 덤프 파일 생성</b>
+                                <code>file_lsass_dump_name</code>
                               </div>
                               <span className="fl-h">dev-01</span>
                               <span>
@@ -569,8 +569,8 @@ function Flow() {
                             </div>
                             <div className="fl-row" data-s="med">
                               <div className="fl-t">
-                                <b>비정상 시간대 로그인</b>
-                                <code>off_hours_logon</code>
+                                <b>Tor 주소 DNS 조회</b>
+                                <code>dns_tor_gateway</code>
                               </div>
                               <span className="fl-h">hr-04</span>
                               <span>
@@ -582,8 +582,8 @@ function Flow() {
                             </div>
                             <div className="fl-row" data-s="good">
                               <div className="fl-t">
-                                <b>원격 관리 도구 실행</b>
-                                <code>remote_admin_tool</code>
+                                <b>Certutil 로 파일 내려받기</b>
+                                <code>certutil_download</code>
                               </div>
                               <span className="fl-h">it-02</span>
                               <span>
@@ -606,7 +606,7 @@ function Flow() {
                             <b>
                               인코딩된 PowerShell 실행<span className="fl-new">NEW</span>
                             </b>
-                            <code>powershell_encoded · T1059.001</code>
+                            <code>powershell_encoded_command · T1059.001</code>
                           </div>
                           <span className="fl-h">web-03</span>
                           <span>
@@ -648,8 +648,8 @@ function Flow() {
                           <div className="fl-c">
                             <div className="fl-cc">
                               <span>03</span>
-                              <small>자동 실행 등록</small>
-                              <b>HKCU\…\Run</b>
+                              <small>시작 프로그램 등록</small>
+                              <b>updater.lnk</b>
                             </div>
                             <i className="fl-cb warn"></i>
                             <i className="fl-chev"></i>

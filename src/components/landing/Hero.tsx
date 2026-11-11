@@ -56,16 +56,17 @@ function Hero() {
 
     // 흐르는 이벤트 문구 (종류, 내용)
     const EV = [
-      ['proc', 'powershell.exe -enc JABzAD0A…'], ['proc', 'svchost.exe -k netsvcs'], ['proc', 'chrome.exe --type=renderer'], ['proc', 'cmd.exe /c whoami'],
-      ['proc', 'excel.exe /e -embedding'], ['proc', 'rundll32.exe shell32.dll'], ['proc', 'python3 sync.py --all'], ['proc', 'sshd -D'], ['proc', 'node server.js'],
-      ['net', '10.0.4.12 › 185.220.101.4:443'], ['net', '10.0.2.31 › 52.84.12.7:443'], ['net', '10.0.8.5 › 10.0.8.1:53'], ['net', '10.0.3.44 › 142.250.196.110:443'],
-      ['net', '10.0.4.12 › 10.0.4.20:445'], ['net', '10.0.6.9 › 13.107.42.14:443'],
-      ['file', 'invoice.docm'], ['file', 'C:\\Users\\kim\\Downloads\\setup.exe'], ['file', 'report_q3.xlsx'], ['file', '/var/log/auth.log'], ['file', '~/.ssh/known_hosts'], ['file', 'payroll_2026.pdf'],
-      ['reg', 'HKCU\\…\\Run\\updater'], ['reg', 'HKLM\\SYSTEM\\…\\Services'], ['reg', 'HKCU\\…\\RecentDocs'],
-      ['auth', 'login kim'], ['auth', 'login svc_backup'], ['auth', 'sudo -u root'], ['auth', 'logout lee'], ['auth', 'kerberos tgt park'],
-      ['dns', 'update.msedge.net'], ['dns', 'api.github.com'], ['dns', 'x7k2.duckdns.org'], ['dns', 'cdn.jsdelivr.net'],
+      ['proc', 'powershell.exe -enc JABzAD0A…'], ['proc', 'svchost.exe -k netsvcs'], ['proc', 'chrome.exe --type=renderer'], ['proc', 'certutil.exe -urlcache -f http://…/a.exe'],
+      ['proc', 'excel.exe /e -embedding'], ['proc', 'procdump.exe -ma lsass.exe'], ['proc', 'python3 sync.py --all'], ['proc', 'sshd -D'], ['proc', 'node server.js'],
+      ['net', '10.0.4.12 › 185.220.101.4:443 TLS 1.0'], ['net', '10.0.2.31 › 52.84.12.7:443'], ['net', '10.0.8.5 › 10.0.8.1:53'], ['net', '10.0.3.44 › 142.250.196.110:443'],
+      ['net', '10.0.3.44 › 45.61.136.9:443 SSL 3.0'], ['net', '10.0.6.9 › 13.107.42.14:443'],
+      ['file', 'invoice.docm'], ['file', 'C:\\Windows\\Temp\\lsass.dmp'], ['file', 'report_q3.xlsx'], ['file', '/var/log/auth.log'], ['file', '~/.ssh/known_hosts'], ['file', 'payroll_2026.pdf'],
+      ['file', '…\\Startup\\updater.lnk'], ['file', '~/Library/Caches/sync.db'], ['l7', 'GET /api/v1/status 200'],
+      ['script', 'backup.ps1'], ['l7', 'GET /health 200'], ['script', '%TEMP%\\run.ps1'], ['script', 'deploy.sh'], ['dns', 'outlook.office365.com'],
+      ['dns', 'update.msedge.net'], ['dns', 'api.github.com'], ['dns', 'x7k2qv3m.onion'], ['dns', 'cdn.jsdelivr.net'],
     ]
-    const RULE = { proc: 'T1059.001', net: 'T1071.001', file: 'T1486', reg: 'T1547.001', auth: 'T1078', dns: 'T1568' }
+    // 물드는 칩에 붙는 기법 번호. 백엔드 실제 룰(R1~R5, Sigma 룰 파일)에 있는 것만 쓴다
+    const RULE: Record<number, string> = { 0: 'T1059.001', 3: 'T1105', 5: 'T1003.001', 9: 'T1573', 13: 'T1573', 16: 'T1003.001', 21: 'T1547', 26: 'T1059', 31: 'T1090.003' }
     // 캔버스 색: .landing 의 CSS 변수에서 읽고, 테마가 바뀌면 다시 읽는다
     let SEV: string[][] = [], TIER: string[][] = [], DOTC: string[] = [], dotStyle: string[][] = []
     let col = { bg: '', bgRgb: '', ink: '', accentRgb: '', accentInk: '', accentInkRgb: '' }
@@ -94,13 +95,13 @@ function Hero() {
     const pos: Record<'a' | 'b' | 's' | 'r', number[]>[] = []
 
     let sprites: { c: HTMLCanvasElement; w: number; h: number }[][] = [], hot = new Map<number, { c: HTMLCanvasElement; w: number; h: number }>(), SS = 2
-    function chipSprite(k: string, v: string, tier: number, sev?: number) {
+    function chipSprite(k: string, v: string, tier: number, sev?: number, r = '') {
       const c = document.createElement('canvas'), g = c.getContext('2d')!
       const fs = (small ? 10.5 : 12) * SS, pad = 9 * SS, gap = 8 * SS, h = Math.round((small ? 20 : 24) * SS)
       const font = `500 ${fs}px 'JetBrains Mono', ui-monospace, monospace`
       g.font = font
-      const kw = g.measureText('file').width, vw = g.measureText(v).width
-      const rule = sev == null ? '' : RULE[k as keyof typeof RULE], rw = rule ? g.measureText(rule).width + gap : 0
+      const kw = Math.max(g.measureText('file').width, g.measureText(k).width), vw = g.measureText(v).width
+      const rule = sev == null ? '' : r, rw = rule ? g.measureText(rule).width + gap : 0
       c.width = Math.ceil(pad * 2 + kw + gap + vw + rw); c.height = h
       const [bg, line, kc, vc] = TIER[tier]
       g.font = font; g.textBaseline = 'middle'
@@ -121,7 +122,7 @@ function Hero() {
     }
     const hotSprite = (i: number, sev: number) => {
       const key = i * 3 + sev
-      if (!hot.has(key)) hot.set(key, chipSprite(EV[i][0], EV[i][1], 2, sev))
+      if (!hot.has(key)) hot.set(key, chipSprite(EV[i][0], EV[i][1], 2, sev, RULE[i]))
       return hot.get(key)!
     }
 
@@ -563,11 +564,11 @@ function Hero() {
                   <div className="hx-d-ph"><b>최근 탐지된 위협</b><span>실시간</span></div>
                   <div className="hx-d-th"><span>THREAT</span><span>HOST</span><span>SEV</span><span>TIME</span></div>
                   <div className="hx-rows">
-                    <div className="hx-row hx-crit"><div className="hx-row-ph"><i style={{ width: '38%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>문서 대량 암호화 시도</b><code>T1486 · ransomware_mass_encrypt</code></div><span className="hx-row-h">WIN-FIN-02</span><span><span className="badge crit"><i></i>심각</span></span><span className="hx-row-d">02:53:54</span></div></div>
-                    <div className="hx-row hx-crit"><div className="hx-row-ph"><i style={{ width: '30%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>LSASS 메모리 접근</b><code>T1003.001 · lsass_memory_access</code></div><span className="hx-row-h">WIN-DEV-01</span><span><span className="badge crit"><i></i>심각</span></span><span className="hx-row-d">02:17:54</span></div></div>
+                    <div className="hx-row hx-crit"><div className="hx-row-ph"><i style={{ width: '38%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>백업 전체 삭제</b><code>T1490 · wbadmin_delete_all_backups</code></div><span className="hx-row-h">WIN-FIN-02</span><span><span className="badge crit"><i></i>심각</span></span><span className="hx-row-d">02:53:54</span></div></div>
+                    <div className="hx-row hx-crit"><div className="hx-row-ph"><i style={{ width: '30%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>LSASS 메모리 덤프</b><code>T1003.001 · procdump_lsass</code></div><span className="hx-row-h">WIN-DEV-01</span><span><span className="badge crit"><i></i>심각</span></span><span className="hx-row-d">02:17:54</span></div></div>
                     <div className="hx-row hx-high"><div className="hx-row-ph"><i style={{ width: '42%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>인코딩된 PowerShell 명령 실행</b><code>T1059.001 · powershell_encoded_command</code></div><span className="hx-row-h">WIN-HR-03</span><span><span className="badge high"><i></i>높음</span></span><span className="hx-row-d">01:06:18</span></div></div>
-                    <div className="hx-row hx-high"><div className="hx-row-ph"><i style={{ width: '34%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>시작 프로그램 무단 등록</b><code>T1547.001 · registry_run_key</code></div><span className="hx-row-h">WIN-HR-03</span><span><span className="badge high"><i></i>높음</span></span><span className="hx-row-d">00:41:07</span></div></div>
-                    <div className="hx-row hx-med"><div className="hx-row-ph"><i style={{ width: '28%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>비정상 시간대 로그인</b><code>T1078 · off_hours_login</code></div><span className="hx-row-h">SRV-DB-01</span><span><span className="badge med"><i></i>보통</span></span><span className="hx-row-d">00:12:30</span></div></div>
+                    <div className="hx-row hx-high"><div className="hx-row-ph"><i style={{ width: '34%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>시작 프로그램 폴더에 파일 생성</b><code>T1547 · file_in_autorun_path</code></div><span className="hx-row-h">WIN-HR-03</span><span><span className="badge high"><i></i>높음</span></span><span className="hx-row-d">00:41:07</span></div></div>
+                    <div className="hx-row hx-med"><div className="hx-row-ph"><i style={{ width: '28%' }}></i><i style={{ width: '14%', marginLeft: 'auto' }}></i></div><div className="hx-row-c"><i className="hx-row-bar"></i><div className="hx-row-t"><b>Tor 주소 DNS 조회</b><code>T1090.003 · dns_tor_gateway</code></div><span className="hx-row-h">SRV-DB-01</span><span><span className="badge med"><i></i>보통</span></span><span className="hx-row-d">00:12:30</span></div></div>
                   </div>
                 </div>
                 <div className="card hx-d-chart hx-dp">
@@ -581,11 +582,11 @@ function Hero() {
           </div>
         </div>
 
-        <div className="hx-chip hx-crit" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">file</span><span className="hx-chip-v">x214 .docx › .locked</span><span className="hx-chip-r">T1486</span></div>
-        <div className="hx-chip hx-crit" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">proc</span><span className="hx-chip-v">rundll32.exe comsvcs.dll MiniDump</span><span className="hx-chip-r">T1003.001</span></div>
+        <div className="hx-chip hx-crit" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">proc</span><span className="hx-chip-v">wbadmin delete catalog -quiet</span><span className="hx-chip-r">T1490</span></div>
+        <div className="hx-chip hx-crit" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">proc</span><span className="hx-chip-v">procdump.exe -ma lsass.exe</span><span className="hx-chip-r">T1003.001</span></div>
         <div className="hx-chip hx-high" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">proc</span><span className="hx-chip-v">powershell.exe -enc JABzAD0A…</span><span className="hx-chip-r">T1059.001</span></div>
-        <div className="hx-chip hx-high" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">reg</span><span className="hx-chip-v">HKCU\…\Run\updater</span><span className="hx-chip-r">T1547.001</span></div>
-        <div className="hx-chip hx-med" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">auth</span><span className="hx-chip-v">login svc_backup 00:12</span><span className="hx-chip-r">T1078</span></div>
+        <div className="hx-chip hx-high" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">file</span><span className="hx-chip-v">…\Startup\updater.lnk</span><span className="hx-chip-r">T1547</span></div>
+        <div className="hx-chip hx-med" aria-hidden="true"><i className="hx-chip-t"></i><span className="hx-chip-k">dns</span><span className="hx-chip-v">x7k2qv3m.onion</span><span className="hx-chip-r">T1090.003</span></div>
       </div>
     </section>
   )
