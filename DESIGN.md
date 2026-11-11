@@ -62,7 +62,7 @@ UI 스타일은 소프트(애플식): 카드는 테두리 없이 옅은 그림�
 ## 6. 모션
 - 콘솔: 140~200ms 색·배경 전환, 첫 진입 시 섹션이 6px 위로 떠오르며 50ms 간격으로 등장, 막대는 왼쪽·아래에서 자라난다. 그 이상은 넣지 않는다.
 - 랜딩: GSAP ScrollTrigger 를 쓴다(전역 스킬 `gsap-scrolltrigger`). 문장 단위 등장, 고정(pin)된 장면 전환, 스크롤에 맞춰 그려지는 증거 체인.
-- `transform`, `opacity` 만 움직인다. `prefers-reduced-motion` 이면 모든 연출을 끈다.
+- `transform`, `opacity` 만 움직인다. 콘솔은 `prefers-reduced-motion` 이면 모든 연출을 끈다. 랜딩은 이 설정을 따르지 않고 항상 연출을 보여준다(ADR 014).
 - 예외 하나: 랜딩 관계 그래프의 선은 SVG `stroke-dashoffset` 으로 스크롤에 맞춰 그린다(선이 그려지는 표현은 transform 으로 대신할 수 없다). 다른 곳에는 쓰지 않는다. 결정은 `docs/design-docs/decisions/014-landing-scroll-storytelling.md`.
 
 ## 7. 금지
