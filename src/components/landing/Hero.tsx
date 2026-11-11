@@ -522,7 +522,7 @@ function Hero() {
         <p className="h2 hx-head hx-head2">위협만 골라내고</p>
         <p className="h2 hx-head hx-head3">한 화면에 정리합니다</p>
 
-        <div className="hx-gtag" aria-hidden="true"><i></i>탐지 규칙 312개</div>
+        <div className="hx-gtag" aria-hidden="true"><i></i>탐지 규칙</div>
         <div className="hx-count" aria-hidden="true">
           <div>들어온 이벤트 <b id="hx-n">18,240</b></div>
           <div>걸러낸 위협 <b className="hx-m" id="hx-m">0</b></div>
@@ -549,7 +549,6 @@ function Hero() {
               <div className="card hx-d-strip hx-dp">
                 <div><span className="hx-live"></span>LIVE SIGNAL</div>
                 <div>24시간 수집 이벤트<b className="hx-kv" data-live="1">0</b></div>
-                <div>탐지 규칙<b>312</b></div>
                 <div>규칙 적중<b className="hx-kv" data-to="5">0</b></div>
                 <div>온라인 엔드포인트<b>126 / 128</b></div>
               </div>
