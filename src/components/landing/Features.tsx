@@ -225,7 +225,7 @@ function Features() {
       const msgs = [
         ['crit', '심각', 'WIN-FIN-02 에서 LSASS 메모리 덤프 탐지'],
         ['high', '높음', 'DEV-07 에서 인코딩된 PowerShell 실행'],
-        ['med', '보통', 'VPN-GW 로그인 실패 38회'],
+        ['med', '보통', 'MAC-07 에서 Tor 주소 DNS 조회'],
         ['good', '조치', 'WIN-FIN-02 프로세스 종료 완료'],
       ]
       let mi = 0,
@@ -553,7 +553,7 @@ function Features() {
                 <h3>모든 이벤트를 실시간으로 모아요</h3>
                 <span className="ft-tag">LIVE</span>
               </div>
-              <p className="ft-td">프로세스, 네트워크, 로그인 기록이 에이전트에서 바로 들어와요.</p>
+              <p className="ft-td">프로세스, 네트워크, 파일, DNS 기록이 에이전트에서 바로 들어와요.</p>
               <div className="ft-viz" aria-hidden="true">
                 <div className="ft-live-top">
                   <span className="badge good ft-sig">
@@ -618,50 +618,50 @@ function Features() {
                   <li data-sev="high">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1547.001</span>
-                    <span className="ft-rname">레지스트리 자동 실행</span>
+                    <span className="ft-rid">T1547</span>
+                    <span className="ft-rname">시작 프로그램 폴더 등록</span>
                     <b className="mono">6</b>
                   </li>
                   <li data-sev="crit">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1078</span>
-                    <span className="ft-rname">정상 계정 악용</span>
+                    <span className="ft-rid">T1490</span>
+                    <span className="ft-rname">백업·섀도 복사본 삭제</span>
                     <b className="mono">3</b>
                   </li>
                   <li data-sev="med">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1110</span>
-                    <span className="ft-rname">무차별 대입 로그인</span>
+                    <span className="ft-rid">T1053.005</span>
+                    <span className="ft-rname">임시 폴더 예약 작업</span>
                     <b className="mono">11</b>
                   </li>
                   <li data-sev="high">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1055</span>
-                    <span className="ft-rname">프로세스 인젝션</span>
+                    <span className="ft-rid">T1218.005</span>
+                    <span className="ft-rname">mshta 원격 HTA 실행</span>
                     <b className="mono">2</b>
                   </li>
                   <li data-sev="crit">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1486</span>
-                    <span className="ft-rname">파일 대량 암호화</span>
+                    <span className="ft-rid">T1003.002</span>
+                    <span className="ft-rname">SAM 하이브 덤프</span>
                     <b className="mono">1</b>
                   </li>
                   <li data-sev="med">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1021.001</span>
-                    <span className="ft-rname">원격 데스크톱 접속</span>
+                    <span className="ft-rid">T1573</span>
+                    <span className="ft-rname">낡은 TLS 연결</span>
                     <b className="mono">5</b>
                   </li>
                   <li data-sev="high">
                     <i className="ft-bar"></i>
                     <em className="ft-flash"></em>
-                    <span className="ft-rid">T1566.001</span>
-                    <span className="ft-rname">피싱 첨부파일 실행</span>
+                    <span className="ft-rid">T1059</span>
+                    <span className="ft-rname">문서 앱이 셸 실행</span>
                     <b className="mono">2</b>
                   </li>
                   <li data-sev="med">

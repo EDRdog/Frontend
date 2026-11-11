@@ -437,7 +437,7 @@ function ThreatMap() {
       { id: 'doc', t: 'FILE', l: 'invoice.docm', d: [265, 64], m: [92, 146], k: 'high' },
       { id: 'word', t: 'PROC', l: 'winword.exe', d: [265, 220], m: [268, 146], k: 'high' },
       { id: 'exp', t: 'PROC', l: 'explorer.exe', d: [265, 376], k: 'off' },
-      { id: 'reg', t: 'REG', l: 'HKCU\\…\\Run', d: [464, 64], m: [92, 256], k: 'crit' },
+      { id: 'reg', t: 'FILE', l: 'updater.lnk', d: [464, 64], m: [92, 256], k: 'crit' },
       { id: 'ps', t: 'PROC', l: 'powershell.exe', d: [464, 220], m: [268, 256], k: 'crit' },
       { id: 'chr', t: 'PROC', l: 'chrome.exe', d: [464, 376], k: 'off' },
       { id: 'dom', t: 'DOMAIN', l: 'update-cdn.top', d: [663, 64], m: [92, 366], k: 'crit' },
@@ -446,7 +446,7 @@ function ThreatMap() {
     ]
     // 그려지는 순서대로. 넷째 값은 경로 색(악성일 때)
     const EDGES = [
-      ['kim', 'web', 'logon', 'ctx'],
+      ['kim', 'web', 'user', 'ctx'],
       ['web', 'word', 'runs', 'ctx'],
       ['web', 'exp', 'runs', 'off'],
       ['doc', 'word', 'opened', 'high'],
@@ -869,7 +869,7 @@ function ThreatMap() {
             </div>
             <ul id="mp-rows"></ul>
             <div className="mp-list-ft">
-              <span>오늘 차단한 연결</span>
+              <span>오늘 외부 연결</span>
               <b id="mp-total">1,284</b>
             </div>
           </aside>
@@ -884,7 +884,7 @@ function ThreatMap() {
               하나로 잇습니다
             </h2>
             <p className="lead mp-up2">
-              프로세스, 파일, 레지스트리, 네트워크 기록을 사건 하나로 묶습니다. 공격이 어디서 시작해
+              프로세스, 파일, DNS, 네트워크 기록을 사건 하나로 묶습니다. 공격이 어디서 시작해
               어디까지 갔는지 선을 따라 읽으면 됩니다.
             </p>
             <ol className="mp-steps mp-up2">
@@ -924,7 +924,7 @@ function ThreatMap() {
             <svg
               id="mp-graph"
               role="img"
-              aria-label="web-03 사건 관계도. invoice.docm 문서를 연 winword.exe 가 powershell.exe 를 실행했고, powershell.exe 가 자동 실행 레지스트리 키를 쓰고 185.220.101.4 와 통신했습니다."
+              aria-label="web-03 사건 관계도. invoice.docm 문서를 연 winword.exe 가 powershell.exe 를 실행했고, powershell.exe 가 시작 프로그램 폴더에 파일을 만들고 185.220.101.4 와 통신했습니다."
             ></svg>
             <div className="mp-verdict">
               <span className="badge crit">
@@ -932,10 +932,9 @@ function ThreatMap() {
               </span>
               <b>악성 매크로 문서에서 시작된 외부 통신</b>
               <span className="mp-ttp mono">
-                <span>T1566.001</span>
+                <span>T1059</span>
                 <span>T1059.001</span>
-                <span>T1547.001</span>
-                <span>T1071</span>
+                <span>T1547</span>
               </span>
             </div>
           </div>
