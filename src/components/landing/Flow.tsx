@@ -244,12 +244,11 @@ function Flow() {
       const dots = qa('.fl-ts em'),
         trk = q('.fl-trk i')
       tl.to(dots[0], { opacity: 1, duration: 0.15 }, T3 + 0.85)
-      tl.to(trk, { scaleX: 1 / 3, duration: 0.3, ease: 'none' }, T3 + 0.9)
+      tl.to(trk, { scaleX: 1 / 2, duration: 0.3, ease: 'none' }, T3 + 0.9)
       tl.to(dots[1], { opacity: 1, duration: 0.15 }, T3 + 1.15)
 
       // 프로세스 종료: 누름 → 요청 중 → 종료 완료
-      const kill = q('.fl-sw-kill .fl-btn'),
-        iso = q('.fl-sw-iso .fl-btn')
+      const kill = q('.fl-sw-kill .fl-btn')
       tl.set(cur, { x: W * 0.62, y: H + 24 }, 5.5)
       tl.to(
         cur,
@@ -260,35 +259,30 @@ function Flow() {
       swap('.fl-sw-kill', 0, 1, 6.15)
       swap('.fl-sw-kill', 1, 2, 6.75)
       swap('.fl-sw-ps', 0, 1, 6.8)
-      tl.to(trk, { scaleX: 2 / 3, duration: 0.3, ease: 'none' }, 6.8)
-      tl.to(dots[2], { opacity: 1, duration: 0.15 }, 7.05)
+      swap('.fl-sw-net', 0, 1, 6.85)
+      swap('.fl-sw-host', 0, 1, 6.9)
 
-      // 호스트 격리: 누름 → 격리됨, 체인 05 가 초록으로 닫힌다
-      tl.to(cur, { ...aim(iso, 0.5, 0.6), duration: 0.35, ease: 'power2.inOut' }, 6.95)
-      press(iso, 7.35)
-      swap('.fl-sw-iso', 0, 1, 7.4)
-      swap('.fl-sw-host', 0, 1, 7.45)
-      swap('.fl-sw-net', 0, 1, 7.45)
+      // 종료가 끝나면 체인 05 가 초록으로 닫힌다 (대응은 프로세스 종료 하나뿐이다, 격리는 미구현)
       const c5 = q('.fl-c5')
-      tl.to(q('.fl-cc', c5), { autoAlpha: 1, duration: 0.25 }, 7.5)
-      swap('.fl-sw-c5', 0, 1, 7.5)
+      tl.to(q('.fl-cc', c5), { autoAlpha: 1, duration: 0.25 }, 6.9)
+      swap('.fl-sw-c5', 0, 1, 6.9)
       tl.fromTo(
         q('.fl-cb', c5),
         { scaleX: 0 },
         { scaleX: 1, duration: 0.3, ease: 'power2.out' },
-        7.55,
+        6.95,
       )
-      tl.to(trk, { scaleX: 1, duration: 0.3, ease: 'none' }, 7.5)
-      tl.to(dots[3], { opacity: 1, duration: 0.15 }, 7.75)
+      tl.to(trk, { scaleX: 1, duration: 0.3, ease: 'none' }, 6.8)
+      tl.to(dots[2], { opacity: 1, duration: 0.15 }, 7.05)
 
       // 마무리: 처리 시간 도장, 경보는 해결됨
       tl.fromTo(
         q('.fl-stamp'),
         { opacity: 0, x: 12 },
         { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' },
-        7.85,
+        7.25,
       )
-      swap('.fl-sw-res', 0, 1, 7.95)
+      swap('.fl-sw-res', 0, 1, 7.35)
       const cnt = q('.fl-cnt'),
         cno = { v: +cnt.dataset.from! }
       tl.to(
@@ -301,10 +295,10 @@ function Flow() {
             cnt.textContent = String(Math.round(cno.v))
           },
         },
-        8,
+        7.4,
       )
-      tl.to(cur, { x: '+=40', y: '+=50', autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, 7.9)
-      tl.to({}, { duration: 0.6 }, 8.4)
+      tl.to(cur, { x: '+=40', y: '+=50', autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, 7.3)
+      tl.to({}, { duration: 0.6 }, 7.8)
 
       // 동작 줄이기: 고정 없이 마지막 장면을 보여 준다
       if (REDUCE) {
@@ -390,7 +384,7 @@ function Flow() {
               <li className="fl-step">
                 <span className="fl-sn">02</span>
                 <h3>대응</h3>
-                <p>프로세스 종료와 호스트 격리까지 그 자리에서 끝냅니다.</p>
+                <p>악성 프로세스 종료까지 그 자리에서 끝냅니다.</p>
               </li>
             </ol>
           </div>
@@ -398,7 +392,7 @@ function Flow() {
           <div
             className="fl-stage"
             role="img"
-            aria-label="EDRdog 콘솔에서 web-03 경보를 열어 공격 경로를 확인하고, 악성 프로세스를 종료한 뒤 호스트를 격리하는 화면"
+            aria-label="EDRdog 콘솔에서 web-03 경보를 열어 공격 경로를 확인하고, 악성 프로세스를 종료하는 화면"
           >
             <div className="fl-tilt">
               <div className="fl-win" aria-hidden="true">
@@ -675,7 +669,7 @@ function Flow() {
                               <small>대응</small>
                               <b className="fl-sw fl-sw-c5">
                                 <span>조치 대기</span>
-                                <span>종료 · 격리</span>
+                                <span>프로세스 종료</span>
                               </b>
                             </div>
                             <i className="fl-cb ok"></i>
@@ -725,7 +719,7 @@ function Flow() {
                           <div>
                             <small>RECOMMENDED</small>
                             <p>
-                              <b>web-03</b> 의 악성 프로세스를 종료하고 격리하세요
+                              <b>web-03</b> 의 악성 프로세스를 종료하세요
                             </p>
                           </div>
                           <div className="fl-acts">
@@ -748,12 +742,6 @@ function Flow() {
                                 <i></i>종료 완료 · PID 4182
                               </span>
                             </span>
-                            <span className="fl-sw fl-sw-iso">
-                              <span className="fl-btn">호스트 격리</span>
-                              <span className="badge low">
-                                <i></i>격리됨
-                              </span>
-                            </span>
                           </div>
                         </div>
 
@@ -764,10 +752,10 @@ function Flow() {
                           </div>
                           <dl>
                             <div>
-                              <dt>네트워크</dt>
+                              <dt>C2 연결</dt>
                               <dd className="fl-sw fl-sw-net">
-                                <span>연결됨</span>
-                                <span>차단됨</span>
+                                <span>연결 중</span>
+                                <span>끊김</span>
                               </dd>
                             </div>
                             <div>
@@ -786,8 +774,8 @@ function Flow() {
                             <span className="badge crit">
                               <i></i>위험
                             </span>
-                            <span className="badge low">
-                              <i></i>격리됨
+                            <span className="badge good">
+                              <i></i>조치 완료
                             </span>
                           </span>
                         </div>
@@ -815,16 +803,10 @@ function Flow() {
                               <b>종료</b>
                               <small>T+00:38</small>
                             </div>
-                            <div className="fl-ts">
-                              <i></i>
-                              <em></em>
-                              <b>격리</b>
-                              <small>T+00:47</small>
-                            </div>
                           </div>
                           <div className="fl-stamp">
                             <small>탐지부터 해결까지</small>
-                            <b>T+00:47</b>
+                            <b>T+00:38</b>
                           </div>
                         </div>
                       </div>
