@@ -27,7 +27,7 @@
 |---|---|---|---|---|
 | LD-10 | gsap 이 랜딩 청크에만 들어가고 메인 청크와 로그인, 콘솔에는 들어가지 않는다 | `npm run build` 산출물에서 `index-*.js` 에 gsap 이 없고 `Landing-*.js` 가 따로 있는지 확인 | `docs/design-docs/decisions/014-landing-scroll-storytelling.md` | 수동 |
 | LD-11 | `/` 를 떠나면 rAF, 관찰자, 타이머, ScrollTrigger 가 모두 정리된다 | `/` → `/dashboard` → `/` 를 반복해 콘솔 에러와 중복 고정 구간이 없는지 본다 | `docs/design-docs/decisions/014-landing-scroll-storytelling.md` | 수동 |
-| LD-12 | `prefers-reduced-motion` 이면 고정 없이 마지막 상태를 차례로 보여준다 | OS 설정으로 움직임 줄이기를 켜고 `/` 를 연다 | `DESIGN.md` 6장 | 수동 |
+| LD-12 | 움직임 줄이기 설정을 켜도 랜딩 연출은 그대로 돈다 | OS 설정으로 움직임 줄이기를 켜고 `/` 를 연다 | `DESIGN.md` 6장, ADR 014 | 수동 |
 
 ## 모바일 (390px)
 
