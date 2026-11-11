@@ -271,12 +271,24 @@ function ThreatMap() {
       ctx.font = '600 10px "JetBrains Mono", monospace'
       ctx.fillText('SEOUL', hx + 11, hy + 17)
     }
+    // 출발지: 점 + 나라 코드 + 서울까지 옅은 경로. 지도가 보이면 어디서 들어오는지 바로 읽힌다
     function drawSources(alpha: number) {
+      ctx.font = '600 10px "JetBrains Mono", monospace'
+      ctx.lineWidth = 1
       for (const s of SRC) {
+        const x = px(s.lon), y = py(s.lat)
+        ctx.strokeStyle = C[s.sev]
+        ctx.globalAlpha = alpha * 0.14
+        strokePart(curve(s), 0, 1, 36)
         ctx.globalAlpha = alpha
         ctx.fillStyle = C[s.sev]
-        disc(ctx, px(s.lon), py(s.lat), 2.2)
+        disc(ctx, x, y, 2.2)
+        // 네덜란드는 독일과 붙어 있어 글자를 점 왼쪽에 둔다
+        const left = s.cc === 'NL'
+        ctx.textAlign = left ? 'right' : 'left'
+        ctx.fillText(s.cc, x + (left ? -7 : 7), y - 7)
       }
+      ctx.textAlign = 'left'
       ctx.globalAlpha = 1
     }
 
@@ -302,9 +314,10 @@ function ThreatMap() {
     let revealAt = -1,
       nextSpawn = 0
     const TAIL = 0.34
+    let wave = 0
     function spawn(t: number) {
       const pool = SRC.flatMap((s) => (s.sev === 'crit' ? [s, s, s] : [s, s]))
-      const s = pool[(Math.random() * pool.length) | 0]
+      const s = wave < SRC.length ? SRC[wave++] : pool[(Math.random() * pool.length) | 0]
       const k = curve(s)
       arcs.push({
         s,
@@ -321,7 +334,7 @@ function ThreatMap() {
       if (revealAt < 0) return
       const hx = px(HOME.lon),
         hy = py(HOME.lat)
-      const rv = clamp((t - revealAt) / 1900)
+      const rv = clamp((t - revealAt) / 1100)
       // 처음 보일 때 서울에서 퍼져 나가며 지도가 드러난다
       if (rv < 1) {
         const rr = out3(rv) * Math.hypot(Math.max(hx, W - hx), Math.max(hy, H - hy))
@@ -348,11 +361,11 @@ function ThreatMap() {
           disc(ctx, d[0], d[1], dotR)
         }
       }
-      drawSources(clamp(rv * 2 - 1))
+      drawSources(clamp(rv * 1.6))
 
-      if (rv > 0.55 && t >= nextSpawn && arcs.length < 6) {
+      if (rv > 0.15 && t >= nextSpawn && arcs.length < 8) {
         spawn(t)
-        nextSpawn = t + 380 + Math.random() * 520
+        nextSpawn = t + (wave < SRC.length ? 130 : 380 + Math.random() * 520)
       }
 
       // 연결 궤적: 밝은 머리 + 옅어지는 꼬리 + 지나간 길
@@ -387,12 +400,6 @@ function ThreatMap() {
           disc(ctx, p[0], p[1], 2.4)
           ctx.fillStyle = C.ink
           disc(ctx, p[0], p[1], 1.1)
-        }
-        if (u < 0.7) {
-          ctx.globalAlpha = Math.sin((u / 0.7) * Math.PI)
-          ctx.fillStyle = col
-          ctx.font = '600 10px "JetBrains Mono", monospace'
-          ctx.fillText(a.s.cc, k[0] + 7, k[1] - 7)
         }
         if (u >= 1 && !a.landed) {
           a.landed = true
@@ -787,11 +794,11 @@ function ThreatMap() {
       })
       ScrollTrigger.create({
         trigger: box,
-        start: 'top 78%',
+        start: 'top 92%',
         once: true,
         onEnter: () => {
           revealAt = clock
-          nextSpawn = clock + 1100
+          nextSpawn = clock
           wake()
         },
       })

@@ -6,7 +6,7 @@ import { gsap, ScrollTrigger, prefersReduced, cssVar, rgbOf, onThemeChange } fro
 type Lane = { u: number; z: number; v: number; list: Particle[] }
 type Particle = {
   chip: boolean; z: number; u: number; x: number; y: number; v: number
-  st: number; t: number; vy: number; s: number; sev: number; w: number; ln?: Lane
+  st: number; t: number; vy: number; s: number; sev: number; w: number; hot: number; ln?: Lane
 }
 
 // 히어로: 이벤트 흐름 → 탐지 → 대시보드. 스크롤 하나에 세 장면이 이어진다.
@@ -24,6 +24,7 @@ function Hero() {
     const gtag = $('.hx-gtag'), count = $('.hx-count'), nEl = $('#hx-n'), mEl = $('#hx-m')
     const dash = $('.hx-dash'), parts = $$('.hx-dp'), rows = $$('.hx-row'), chips = $$('.hx-chip'), kvs = $$('.hx-kv')
     const plot = $('.hx-d-plot')
+    const sAll = $('#hx-s-all'), sDet = $('#hx-s-det'), sCrit = $('#hx-s-crit')
     const landing = root.closest('.landing') || root
     let dead = false, raf = 0
     const offs: (() => void)[] = []
@@ -88,7 +89,7 @@ function Hero() {
     const NDOT = small ? 340 : 1000, SPEED = small ? 150 : 330
     const LANES = small ? 15 : 30, PER = small ? 2 : 3
     let W = 1, H = 1, dpr = 1, Gx = 0, b1 = [0, 1], b2 = [0, 1], dx = 0, dy = 0, ds = 1, gw = 0, scrimY = 0, scrimRy = 1
-    const eb = $('.hx-eb'), sub = $('.hx-sub'), cta = $('.hx-cta'), words = $$('.hx-w')
+    const eb = $('.hx-eb'), sub = $('.hx-sub'), cta = $('.hx-cta'), stats = $('.hx-stats'), statsAt = $('.hx-stats-at'), down = $('.hx-down'), words = $$('.hx-w')
     // 조각마다 출발 자리(a), 머무는 자리(b), 표 위 자리(s), 도착할 표 행(r)
     const pos: Record<'a' | 'b' | 's' | 'r', number[]>[] = []
 
@@ -125,7 +126,7 @@ function Hero() {
     }
 
     // 입자: 빛줄기 점(dot)과 차선을 따라 흐르는 글자 조각(chip). z 가 클수록 가깝고 크고 빠르다
-    const mk = (chip: boolean): Particle => ({ chip, z: rnd(), u: 0, x: 0, y: 0, v: 0, st: 0, t: 0, vy: 0, s: 0, sev: 0, w: 200 })
+    const mk = (chip: boolean): Particle => ({ chip, z: rnd(), u: 0, x: 0, y: 0, v: 0, st: 0, t: 0, vy: 0, s: 0, sev: 0, w: 200, hot: -1 })
     const P: Particle[] = []
     for (let i = 0; i < NDOT; i++) P.push(mk(false))
     // 같은 차선의 조각은 같은 속도라 서로 겹치지 않는다
@@ -139,7 +140,7 @@ function Hero() {
     const chipScale = (z: number) => 0.62 + 0.5 * z
     const tierOf = (z: number) => (z < 0.38 ? 0 : z < 0.72 ? 1 : 2)
     function reset(p: Particle, x: number) {
-      p.x = x; p.st = 0; p.t = 0; p.vy = 0
+      p.x = x; p.st = 0; p.t = 0; p.vy = 0; p.hot = -1
       if (!p.chip) { p.u = rnd(); p.v = SPEED * (0.4 + p.z) * (0.85 + rnd() * 0.3); return }
       p.u = p.ln!.u; p.v = p.ln!.v
       p.s = (rnd() * EV.length) | 0
@@ -205,6 +206,9 @@ function Hero() {
       const o1 = seg(p, 0.05, 0.12)
       put(intro, 0, -70 * out3(o1), 1, 1 - o1)
       intro.style.visibility = o1 >= 1 ? 'hidden' : ''
+      put(statsAt, 0, 20 * out3(o1), 1, 1 - o1)
+      put(down, 0, 0, 1, 1 - seg(p, 0.01, 0.05))
+      down.style.visibility = p > 0.05 ? 'hidden' : ''
       const i2 = out3(seg(p, 0.12, 0.18)), o2 = seg(p, 0.5, 0.54)
       put(head2, 0, 30 * (1 - i2) - 40 * o2, 1, i2 * (1 - o2))
       const i3 = out3(seg(p, 0.54, 0.6))
@@ -252,6 +256,28 @@ function Hero() {
       const kf = out3(seg(p, 0.66, 0.8))
       kvs.forEach((el) => (el.textContent = fmt(Math.round((el.dataset.live ? N : +el.dataset.to!) * kf))))
       cols.forEach((el, i) => (el.style.transform = `scaleY(${out3(seg(p, 0.68 + i * 0.014, 0.76 + i * 0.014))})`))
+    }
+
+    // 1장: 흐르는 로그 중 수상한 조각이 지나가는 도중에 위협 색으로 물든다
+    const SUS = [0, 3, 5, 9, 13, 16, 21, 26, 31]
+    const SUS_SEV: Record<number, number> = { 0: 1, 3: 2, 5: 0, 9: 1, 13: 2, 16: 0, 21: 1, 26: 2, 31: 0 }
+    let flagT = 0.8, det = 0, crit = 0
+    const bump = (el: HTMLElement, v: number) => { el.textContent = String(v); el.classList.add('hx-hit'); setTimeout(() => el.classList.remove('hx-hit'), 900) }
+    function markOne() {
+      if (C.filter((q) => q.hot >= 0 && q.st === 0).length >= 3) return
+      // 제목 덩어리와 겹치지 않고, 화면 왼쪽 절반쯤에 있어 물든 채로 한동안 흘러갈 조각만 고른다
+      const rx = (W < 860 ? W * 0.6 : Math.min(W * 0.52, 720) * 0.9), ry = scrimRy * (W < 860 ? 0.75 : 0.9)
+      const ok = C.filter((q) => {
+        if (q.st !== 0 || q.hot >= 0 || q.z < 0.38 || !SUS.includes(q.s)) return false
+        const x0 = q.x - q.w, cx = (x0 + q.x) / 2
+        if (x0 < W * 0.03 || q.x > W * (W < 860 ? 0.97 : 0.62) || q.y < 90 || q.y > H - 50) return false
+        return ((cx - W / 2) / rx) ** 2 + ((q.y - scrimY) / ry) ** 2 > 1
+      })
+      const q = ok[(rnd() * ok.length) | 0]
+      if (!q) return
+      q.sev = SUS_SEV[q.s]; q.hot = 0
+      bump(sDet, ++det)
+      if (q.sev === 0) bump(sCrit, ++crit)
     }
 
     // 캔버스: 이벤트 흐름 + 탐지 게이트
@@ -316,6 +342,19 @@ function Hero() {
       for (const p0 of C) {
         step(p0)
         if (!sprites.length) continue
+        // 물드는 조각: 회색에서 위협 색으로 천천히 바뀐다 (흐름은 그대로)
+        if (p0.hot >= 0 && p > 0.12) p0.hot = -1
+        if (p0.hot >= 0 && p0.st === 0) {
+          p0.hot += dt
+          const e = Math.min(1, p0.hot / 0.9), sc = chipScale(p0.z), x0 = p0.x - p0.w
+          if (x0 > W || p0.x < 0) continue
+          const n = sprites[tierOf(p0.z)][p0.s], hs = hotSprite(p0.s, p0.sev)
+          ctx.globalAlpha = k * (1 - e)
+          ctx.drawImage(n.c, x0, p0.y - (n.h * sc) / 2, n.w * sc, n.h * sc)
+          ctx.globalAlpha = k * e
+          ctx.drawImage(hs.c, x0, p0.y - (hs.h * sc) / 2, hs.w * sc, hs.h * sc)
+          continue
+        }
         const sp = p0.st === 2 ? hotSprite(p0.s, p0.sev) : sprites[p0.st === 1 ? 0 : tierOf(p0.z)][p0.s]
         const sc = chipScale(p0.z)
         let a = k
@@ -328,6 +367,10 @@ function Hero() {
         ctx.drawImage(sp.c, x0, p0.y - (sp.h * sc) / 2, sp.w * sc, sp.h * sc)
       }
       ctx.globalAlpha = 1
+      if (sprites.length) {
+        flagT -= dt
+        if (flagT <= 0 && p < 0.09 && k > 0.5) { flagT = 1.6; markOne() }
+      }
 
       // 1장 문장 뒤를 바탕색으로 눌러 글자가 읽히게 한다
       const scrim = 1 - seg(p, 0.11, 0.17)
@@ -392,7 +435,9 @@ function Hero() {
       if (Math.abs(pT - pS) < 0.0004) pS = pT
       if (pS !== prev || pS > 0.6) apply(pS)
       draw(dt, t, pS, st.k * (1 - seg(pS, 0.52, 0.64)))
+      if (pS < 0.12 && rnd() < dt * 60) N += 1 + ((rnd() * 3) | 0)
       nEl.textContent = fmt(N)
+      sAll.textContent = fmt(N)
       raf = requestAnimationFrame(frame)
     }
     const start = () => { if (!running && inView) { running = true; last = performance.now(); raf = requestAnimationFrame(frame) } }
@@ -432,12 +477,12 @@ function Hero() {
     const gc = gsap.context(() => {
       // 첫 진입: 문장이 아래에서 올라오고 흐름이 번진다
       gsap.set(words, { yPercent: 115 })
-      gsap.set([eb, sub, cta], { opacity: 0, y: 16 })
+      gsap.set([eb, sub, cta, stats], { opacity: 0, y: 16 })
       gsap.timeline({ delay: 0.1 })
         .to(st, { k: 1, duration: 1.4, ease: 'power2.out' }, 0)
         .to(eb, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 0.15)
         .to(words, { yPercent: 0, duration: 1.05, ease: 'power4.out', stagger: 0.09 }, 0.25)
-        .to([sub, cta], { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1 }, 0.7)
+        .to([sub, cta, stats], { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1 }, 0.7)
 
       ScrollTrigger.create({
         trigger: root, start: 'top top', end: '+=320%', pin: true,
@@ -459,6 +504,19 @@ function Hero() {
           <h1 className="hx-h1"><span className="hx-ln"><span className="hx-w">수많은</span> <span className="hx-w">이벤트</span> <span className="hx-w">속에서</span></span></h1>
           <p className="hx-sub">서버와 PC에서 일어나는 이상 행동을 실시간으로 잡아내고, 어떤 위협부터 처리해야 할지 짚어 드립니다.</p>
           <div className="hx-cta"><Link className="btn primary" to="/dashboard">데모 보기</Link><Link className="btn" to="/login">로그인</Link></div>
+        </div>
+
+        <button type="button" className="hx-down" aria-label="아래로 스크롤" onClick={() => scrollBy({ top: innerHeight, behavior: 'smooth' })}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+
+        <div className="hx-stats-at" aria-hidden="true">
+          <div className="hx-stats">
+            <span className="hx-live"></span>
+            <div>오늘 수집<b id="hx-s-all">18,240</b></div><i></i>
+            <div>탐지한 위협<b id="hx-s-det">0</b></div><i></i>
+            <div>심각<b id="hx-s-crit" className="hx-sc">0</b></div>
+          </div>
         </div>
 
         <p className="h2 hx-head hx-head2">위협만 골라내고</p>
