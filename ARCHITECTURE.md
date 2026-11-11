@@ -66,7 +66,7 @@ api/          client.ts(fetch 래퍼) + index.ts(엔드포인트 함수) + demo.
 | `auth` | `token`, `user`(`role`, `mustChangePassword` 포함), `sessionEnded` | localStorage 를 직접 읽고 쓴다. zustand `persist` 는 안 쓴다. `sessionEnded` 는 저장하지 않는다 |
 | `alerts` | `version`, `bump()` | 트리아지 후 재조회 신호. 데이터는 안 들고 있다 |
 | `refresh` | `version`, `lastAt`, `interval` | 전역 새로고침 신호. 기본값은 **꺼짐** |
-| `theme` | `dark` / `light` | 최초값은 `prefers-color-scheme` 추종. 저장하지 않는다 |
+| `theme` | `dark` / `light` | 최초값은 항상 `dark`(OS 설정을 따르지 않는다). 저장하지 않는다 |
 
 자동 새로고침이 기본 꺼짐인 이유는 켜 두면 조사하는 도중에 목록이 바뀌어 보던 줄을 놓치기 때문이다. 켜는 것은 사용자가 정한다.
 
