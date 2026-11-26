@@ -240,7 +240,7 @@ const items: NavItem[] = [
   {
     to: '/selftest',
     group: 'PLATFORM',
-    label: '자체점검',
+    label: 'KISA 기준 점검',
     needsLogin: true,
     icon: (
       <svg

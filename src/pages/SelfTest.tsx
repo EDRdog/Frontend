@@ -17,7 +17,7 @@ const TRIGGER_LABELS: Record<SelfTestRun['trigger'], string> = {
   MANUAL: '요청',
 }
 
-const CATEGORY_LABELS = { selftest: '자체시험', integrity: '무결성' }
+const CATEGORY_LABELS = { selftest: '서버 시험', integrity: '무결성' }
 
 const STATUS_TONE = { PASS: 'good', FAIL: 'crit', SKIP: 'mid' } as const
 
@@ -60,7 +60,7 @@ function SelfTest() {
       <div className="flex flex-wrap items-end gap-[16px]">
         <div>
           <div className="text-[18px] sm:text-[20px] font-bold text-ink tracking-[-0.01em]">
-            자체점검
+            KISA 기준 점검
           </div>
           <div className="mt-[6px] text-[13px] text-faint">
             관리 서버가 스스로를 시험하고, 실행 파일과 설정 파일이 기준값과 같은지 확인합니다.
@@ -122,7 +122,7 @@ function SelfTest() {
                 </ul>
               </Card>
               <div className="rounded-sm border border-dashed border-line px-[16px] py-[12px] text-[12.5px] text-mid">
-                에이전트의 자체시험과 무결성 결과는 감사기록에서 종류 agent 로 봅니다.
+                에이전트의 시험과 무결성 결과는 감사기록에서 종류 agent 로 봅니다.
                 <Link to="/audit" className="ml-[4px] font-semibold">
                   감사기록 보기
                 </Link>
