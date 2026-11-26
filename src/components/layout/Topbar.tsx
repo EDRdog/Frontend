@@ -36,7 +36,7 @@ const titles: Record<string, string> = {
   '/lookup': 'IP·도메인 조회',
   '/onboarding': '수집 알림 연동',
   '/audit': '감사기록',
-  '/selftest': '자체점검',
+  '/selftest': 'KISA 기준 점검',
   '/settings': '설정',
 }
 
